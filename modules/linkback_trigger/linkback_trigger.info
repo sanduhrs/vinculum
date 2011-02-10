@@ -1,0 +1,6 @@
+name = Linkback - Trigger actions
+description = Integrate with the core trigger module to carry out actions when linkbacks are received.
+core = 7.x
+package = Linkback
+dependencies[] = linkback
+dependencies[] = trigger

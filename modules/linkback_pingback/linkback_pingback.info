@@ -1,0 +1,5 @@
+name = Linkback - Pingback handler
+description = Provides the Pingback protocol for the Linkback module.
+package = Linkback
+core = 7.x
+dependencies[] = linkback

@@ -1,0 +1,5 @@
+name = Linkback - Trackback handler
+description = Provides the Trackback protocol for the Linkback module.
+core = 7.x
+package = Linkback
+dependencies[] = linkback

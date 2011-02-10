@@ -1,1 +1,7 @@
 name = Linkback
+description = Provides pingback and trackback support.
+package = Linkback
+core = 7.x
+files[] = linkback.module
+files[] = linkback.test
+configure = admin/config/content/linkback

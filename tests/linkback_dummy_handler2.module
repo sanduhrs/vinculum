@@ -1,0 +1,14 @@
+<?php
+/**
+ * @file
+ * Provide a dummy handler to test the Linkback module.
+ */
+
+/**
+ * Implements hook_linkback_handler().
+ */
+function linkback_dummy_handler2_linkback_handler() {
+  return array(
+    'protocol' => t('Dummy handler 2'),
+  );
+}

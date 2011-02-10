@@ -1,0 +1,239 @@
+<?php
+
+/**
+ * @file
+ * Tests for the linkback module.
+ */
+
+/**
+ * Test that the list of handlers is loaded properly.
+ */
+class LinkbackLoadHandlersTestCase extends DrupalWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Load handlers',
+      'description' => 'Test the registration of linkback handlers.',
+      'group' => 'Linkback',
+    );
+  }
+
+  function setUp() {
+    parent::setUp('linkback', 'linkback_dummy_handler');
+  }
+
+
+  /**
+   * Test the module-weight listing helper.
+   */
+  function testGetModuleWeights() {
+    $expected_weights = array(
+      'linkback' => 0,
+      'linkback_dummy_handler' => 0,
+    );
+
+    $weights = linkback_get_module_weights(array('linkback', 'linkback_dummy_handler'));
+
+    $this->assertTrue(count($weights) == 2, t('@count weights reported.', array('@count' => count($weights))));
+    $this->assertEqual($weights, $expected_weights, t('Helper reports correct weights for the modules.'));
+  }
+
+  /**
+   * Enable a dummy handler and check the hooks provide the proper handler
+   * information.
+   */
+  function testLoadHandler() {
+    // With the dummy handler enabled, the protocol-list should show a single
+    // handler:
+    $expected_handler = (object) array(
+      'protocol' => t('Dummy handler'),
+      'module'   => 'linkback_dummy_handler',
+      'weight'   => 0,
+    );
+
+    $handlers = linkback_load_all_handlers(TRUE);
+    $this->assertTrue(count($handlers) == 1, t('@count handler loaded.', array('@count' => count($handlers))));
+    $this->assertEqual(array_shift($handlers), $expected_handler, t('Handler has correct information.'));
+  }
+
+  /**
+   * Check that the linkback_load_all_handlers() helper will always provide the
+   * handlers ordered by module-weight, and that the linkback_set_weight()
+   * helper will correctly reset the system module-weight caches.
+   */
+  function testResetModuleWeights() {
+    // Enable the second handler.
+    module_enable(array('linkback_dummy_handler2'));
+
+    // With both dummy handlers enabled, the protocol-list should show both
+    // handlers, ordered by filename
+    $expected_handlers = array();
+    $expected_handlers['linkback_dummy_handler'] = (object) array(
+      'protocol' => t('Dummy handler'),
+      'module'   => 'linkback_dummy_handler',
+      'weight'   => 0,
+    );
+    $expected_handlers['linkback_dummy_handler2'] = (object) array(
+      'protocol' => t('Dummy handler 2'),
+      'module'   => 'linkback_dummy_handler2',
+      'weight'   => 0,
+    );
+
+
+    $handlers = linkback_load_all_handlers(TRUE);
+    $this->assertTrue(count($handlers) == 2, t('@count handlers loaded.', array('@count' => count($handlers))));
+    $this->assertEqual($handlers, $expected_handlers, t('Unweighted handlers are sorted correctly (by module name).'));
+
+    // Give the first dummy handler a high weight.
+    $weights = array(
+      'linkback_dummy_handler' => 5,
+    );
+    linkback_set_weights($weights);
+
+    $expected_handlers = array();
+    $expected_handlers['linkback_dummy_handler2'] = (object) array(
+      'protocol' => t('Dummy handler 2'),
+      'module'   => 'linkback_dummy_handler2',
+      'weight'   => 0,
+    );
+    $expected_handlers['linkback_dummy_handler'] = (object) array(
+      'protocol' => t('Dummy handler'),
+      'module'   => 'linkback_dummy_handler',
+      'weight'   => 5,
+    );
+    $handlers = linkback_load_all_handlers(TRUE);
+    $this->assertTrue(count($handlers) == 2, t('@count handlers loaded.', array('@count' => count($handlers))));
+    $this->assertEqual($handlers, $expected_handlers, t('Weighted handlers are sorted correctly, with the higher-weight module coming second.'));
+  }
+}
+
+
+
+/**
+ * Test that node-saving triggers the linkback protocol.
+ */
+class LinkbackSendTestCase extends DrupalWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Send linkbacks',
+      'description' => 'Test that linkbacks are sent when a node is saved.',
+      'group' => 'Linkback',
+    );
+  }
+
+  function setUp() {
+    parent::setUp('linkback', 'linkback_dummy_handler');
+
+    // Create a dummy content-type
+    $type = array(
+      'type' => 'linkback_dummy_contenttype',
+      'name' => st('Linkback dummy content-type'),
+      'base' => 'node_content',
+      'description' => st("A dummy content-type, used for testing the Linkback module. This content-type should not be visible."),
+      'custom' => 1,
+      'modified' => 1,
+      'locked' => 0,
+    );
+    $type = node_type_set_defaults($type);
+    node_type_save($type);
+    node_add_body_field($type);
+  }
+
+
+
+
+  /**
+   * Test the extraction of text from a node field.
+   */
+  function testFieldExtraction() {
+    $source_text = "Example plain text which suggests the links http://example.com/ and http://foo.example.com/bar/x.html";
+
+    $node = new stdClass;
+    $node->type = 'linkback_dummy_contenttype';
+    $node->body = array(
+      LANGUAGE_NONE => array(
+        0 => array(
+          'value' => $source_text,
+          'format' => 'plain_text',
+        ),
+      ),
+    );
+
+    // The expected text is the source text, wrapped in <p> tags. with the links wrapped in <a> tags.
+    $expected = '<p>Example plain text which suggests the links <a href="http://example.com/">http://example.com/</a> and <a href="http://foo.example.com/bar/x.html">http://foo.example.com/bar/x.html</a></p>';
+    $extract = trim(_linkback_extract_text($node));
+    $this->assertEqual($expected, $extract, t('Helper correctly extracts the text from the field.'));
+  }
+
+
+  /**
+   * Test the discovery of URLs within text.
+   */
+  function testUrlExtraction() {
+    $text = "
+      This is a section of test text which <a href='http://example.com/'>links
+      to example</a> and <a href='http://foo.example.com/bar/x.html'>links to
+      another example</a>.";
+
+    $expected_links = array(
+      'http://example.com/',
+      'http://foo.example.com/bar/x.html',
+    );
+
+    $links = _linkback_extract_urls($text);
+
+    $this->assertTrue(count($links) == 2, t('@count links reported.', array('@count' => count($links))));
+    $this->assertEqual($links, $expected_links, t('Helper reports correct links for the sample text.'));
+  }
+
+  /**
+   * Test that the helper to send a single linkback is processed.
+   */
+  function testSendSingleLinkback() {
+    $node = $this->drupalCreateNode();
+    $source = "node/{$node->nid}";
+    $target = "http://example.com/";
+    $handler_result = linkback_send_single_linkback($source, $target, $node);
+    $this->assertTrue($handler_result, t('The dummy linkback handler reports success.'));
+    
+    $linkback_is_recorded = linkback_is_sent($node->nid, $target);
+    $this->assertTrue($linkback_is_recorded, t('The linkback has been tracked in the DB.'));
+  }
+
+  /**
+   * Test that linkbacks are attempted when a node is saved.
+   */
+  function testSendLinkbacks() {
+    $text = "
+      This is a section of test text which <a href='http://example.com/'>links
+      to example</a> and <a href='http://foo.example.com/bar/x.html'>links to
+      another example</a>.";
+  
+    $settings = array(
+      'type' => 'linkback_dummy_contenttype',
+      'title' => 'Example node used for testing the linkback module.',
+      'body' => array(
+        LANGUAGE_NONE => array(
+          0 => array(
+            'value' => $text,
+            'format' => filter_default_format(),
+          ),
+        ),
+      ),
+    );
+    $node = $this->drupalCreateNode($settings);
+
+    // After the node is saved, a record should be added to the
+    // {node_linkback_sent table recording 'linkback_dummy_handler' as the
+    // handler which successfully sent the linkback.
+    $target = 'http://example.com/';
+    $success = linkback_is_sent($node->nid, $target);
+    $this->assertTrue($success, t('The link to @target has been successfully recorded.', array('@target' => $target)));
+
+    $target = 'http://foo.example.com/bar/x.html';
+    $success = linkback_is_sent($node->nid, $target);
+    $this->assertTrue($success, t('The link to @target has been successfully recorded.', array('@target' => $target)));
+  }
+
+}

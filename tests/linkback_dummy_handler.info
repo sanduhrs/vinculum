@@ -1,0 +1,5 @@
+name = Linkback Dummy Handler
+description = Provides a dummy handler to test the linkback module.
+package = Testing
+core = 7.x
+hidden = TRUE

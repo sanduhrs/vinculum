@@ -1,0 +1,75 @@
+<?php
+/**
+ * @file
+ * Integrates with core trigger module to fire events when linkbacks are sent
+ * or received.
+ *
+ * Provides:
+ * - Registration of trigger actions.
+ * - Fires actions when linkbacks are send/received.
+ * - Default actions to create comments, etc.
+ */
+
+/**
+ * Implements hook_trigger_info().
+ */
+function linkback_trigger_trigger_info() {
+  return array(
+    'linkback' => array(
+      'linkback_receive' => array(
+        'label' => t('When a new linkback is received'),
+      ),
+    ),
+  );
+}
+
+
+
+/**
+ * Implements hook_action_info().
+ */
+function linkback_trigger_action_info() {
+  return array(
+    'linkback_create_comment_action' => array(
+      'type' => 'linkback',
+      'label' => t('Create comment'),
+      // Available configuration for the new comments:
+      // - Should comment be published?
+      'configurable' => TRUE,
+      'triggers' => array('linkback_receive'),
+    ),
+  );
+}
+
+/**
+ * Configuration form for the linkback_create_comment_action action.
+ */
+function linkback_create_comment_action_form($context) {
+  $form['status'] = array(
+    '#title' => t('Published'),
+    '#type' => 'checkbox',
+    '#default_value' => isset($context['status']) ? $context['status'] : TRUE,
+  );
+
+  return $form;
+}
+
+/**
+ * Configuration form submit handler for the linkback_create_comment_action
+ * action.
+ */
+function linkback_create_comment_action__submit($form, $form_state) {
+  return (bool) array_filter($form_state['values']['status']);
+}
+
+
+
+/**
+ * Implements hook_linkback_received_action().
+ */
+function linkback_trigger_linkback_received_action($record) {
+  // Fire the linkback_receive trigger when a linkback is sent.
+  drupal_set_message('the linkback hook is fired.');
+  watchdog('lb', 'linkback hook fired.');
+}
+

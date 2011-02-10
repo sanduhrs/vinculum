@@ -1,0 +1,24 @@
+<?php
+/**
+ * @file
+ * Provide a dummy handler to test the Linkback module.
+ */
+
+/**
+ * Implements hook_linkback_handler().
+ */
+function linkback_dummy_handler_linkback_handler() {
+  return array(
+    'protocol' => t('Dummy handler'),
+  );
+}
+
+
+/**
+ * Implements hook_linkback_send().
+ *
+ * This handler always reports success.
+ */
+function linkback_dummy_handler_linkback_send($target, $source, $node) {
+  return TRUE;
+}

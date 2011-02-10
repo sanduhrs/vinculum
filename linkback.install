@@ -1,0 +1,136 @@
+<?php
+/**
+ * @file
+ * Install functions for the Linkback module.
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function linkback_schema() {
+  // Provide the tables:
+  // - node_linkback_settings Flags which show if linkback send/receive is
+  //                          enabled for a given node.
+  // - node_linkback_sent     A list of the linkbacks which have already been 
+  //                          sent for a given node.
+  // - node_linkback_received A list of the linkbacks which have been received
+  //                          for a given node.
+
+  $schema = array();
+
+  $schema['node_linkback_settings'] = array(
+    'description' => 'Flags which show if linkback send/receive is enabled for a given node.',
+    'fields' => array(
+      'nid' => array(
+        'description' => 'The {node}.nid this record affects.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'send' => array(
+        'description' => 'Flag if the node may send pingbacks',
+        'type' => 'int',
+        'size' => 'tiny',
+        'default' => 1,
+      ),
+      'receive' => array(
+        'description' => 'Flag if the node may receive pingbacks',
+        'type' => 'int',
+        'size' => 'tiny',
+        'default' => 1,
+      ),
+    ),
+    'indexes' => array(
+      'nid' => array('nid'),
+    ),
+  );
+
+  $schema['node_linkback_sent'] = array(
+    'description' => 'A list of the linkbacks which have already been sent for a given node.',
+    'fields' => array(
+      'nid' => array(
+        'description' => 'The {node}.nid for this record.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'url' => array(
+        'description' => 'The third-party URL',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => '',
+      ),
+      'linkback_handler' => array(
+        'description' => "The linkback handler (i.e. the module's name) which reported success.",
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'timestamp' => array(
+        'description' => 'The Unix timestamp when the linkback was most recently attempted.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'indexes' => array(
+      'nid' => array('nid'),
+    ),
+  );
+
+
+  $schema['node_linkback_received'] = array(
+    'description' => 'A list of the linkbacks which have been received for a given node.',
+    'fields' => array(
+      'nid' => array(
+        'description' => 'The {node}.nid for this record.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'url' => array(
+        'description' => 'The URL of the remote site',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => '',
+      ),
+      'linkback_handler' => array(
+        'description' => 'The handler which reported the linkback.',
+        'type' => 'int',
+        'default' => 0,
+      ),
+      'timestamp' => array(
+        'description' => 'The Unix timestamp when the linkback was received.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'indexes' => array(
+      'nid' => array('nid'),
+    ),
+  );
+
+  return $schema;
+}
+
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function linkback_uninstall() {
+  // Query the variables-table for a list of all variables provided by the
+  // linkback module.
+  $variables = db_select('variable', 'v', array('target' => 'slave'))
+    ->fields('v', array('name'))
+    ->condition("v.name", 'linkback%', 'LIKE')
+    ->execute()
+    ->fetchAll();
+
+  foreach ($variables as $variable) {
+    variable_del($variable);
+  }
+}
