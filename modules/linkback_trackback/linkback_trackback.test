@@ -92,35 +92,69 @@ class LinkbackTrackbackReceiveTestCase extends DrupalWebTestCase {
 
     // Retest for the RDF.
     $this->drupalGet("node/{$node->nid}");
-    $this->assertNoRaw($rdf_text, t('The RDF metadata is now added to the page when linkback is disabled for a node.'));
+    $this->assertNoRaw($rdf_text, t('The RDF metadata is NOT added to the page when linkback is disabled for a node.'));
   }
 
   /**
    * Test that the trackback URL (node/%node/trackback) accepts valid trackback
    * requests.
    */
-  // function testTrackbackEndpointAcceptsValidTrackbacks() {
-  //   // Create a new node.
-  //   $settings = array(
-  //     'type' => 'dummy_contenttype1',
-  //     'title' => 'Example node used for testing the linkback trackback module.',
-  //     'body' => array(
-  //       LANGUAGE_NONE => array(
-  //         0 => array(
-  //           'value' => "Lorem ipsum dolizzle gizzle tellivizzle, dawg adipiscing sure. Nullizzle sapizzle velizzle, shit volutpat, suscipizzle quizzle, gravida brizzle, pizzle. Pellentesque break it down tortizzle",
-  //           'format' => filter_default_format(),
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  //   $node = $this->drupalCreateNode($settings);
-  // 
-  //   // Submit a trackback request to /node/nnn/trackback.
-  //   
-  // }
+  function testTrackbackEndpointAcceptsValidTrackbacks() {
+    // Create a new node.
+    $settings = array(
+      'type' => 'dummy_contenttype1',
+      'title' => 'Example node used for testing the linkback trackback module.',
+      'body' => array(
+        LANGUAGE_NONE => array(
+          0 => array(
+            'value' => "Lorem ipsum dolizzle gizzle tellivizzle, dawg adipiscing sure. Nullizzle sapizzle velizzle, shit volutpat, suscipizzle quizzle, gravida brizzle, pizzle. Pellentesque break it down tortizzle",
+            'format' => filter_default_format(),
+          ),
+        ),
+      ),
+    );
+    $node = $this->drupalCreateNode($settings);
+  
+    // Submit a trackback request to /node/nnn/trackback.
+    // Provide the GET parameters:
+    // - url       The URL of the remote page which links to our site.
+    // - blog_name The name of the remote site.
+    // - title     The subject of the remote blog post which links to ours.
+    // - excerpt   Relevant excerpt of the remote blog post.
+    $query = array(
+      'url'       => 'http://example.com/foshizzle',
+      'blog_name' => 'foo',
+      'title'     => 'bar',
+      'excerpt'   => 'Lorem ipsum dolizzle',
+    );
+    $this->drupalGet("node/{$node->nid}/trackback", array('query' => $query));
+
+
+    // There should now be an entry in the db tables:
+    // - linkback_trackback_received
+    // - node_linkback_received
+    $result = db_select('linkback_trackback_received', 'l')
+      ->fields('l')
+      ->condition('l.nid', $node->nid)
+      ->condition('l.url', 'http://example.com/foshizzle')
+      ->execute()
+      ->fetchAll();
+    $this->assertEqual(1, count($result), t('A trackback record has been saved to the linkback_trackback_received table.'));
+
+
+    $result = db_select('node_linkback_received', 'l')
+      ->fields('l')
+      ->condition('l.nid', $node->nid)
+      ->condition('l.url', 'http://example.com/foshizzle')
+      ->execute()
+      ->fetchAll();
+    $this->assertEqual(1, count($result), t('A linkback record has been saved to the node_linkback_received table.'));
+
+  }
 
 
   /**
+   * @TODO:
    * Test that the trackback URL (node/%node/trackback) rejects invalid
    * trackback requests.
    */
