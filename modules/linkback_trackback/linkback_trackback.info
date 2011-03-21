@@ -3,3 +3,5 @@ description = Provides the Trackback protocol for the Linkback module.
 core = 7.x
 package = Linkback
 dependencies[] = linkback
+files[] = linkback_trackback.module
+files[] = linkback_trackback.test
