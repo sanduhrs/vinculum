@@ -31,7 +31,7 @@ class LinkbackLoadHandlersTestCase extends DrupalWebTestCase {
       'linkback_dummy_handler' => 0,
     );
 
-    $weights = linkback_get_module_weights(array('linkback', 'linkback_dummy_handler'));
+    $weights = _linkback_get_module_weights(array('linkback', 'linkback_dummy_handler'));
 
     $this->assertTrue(count($weights) == 2, t('@count weights reported.', array('@count' => count($weights))));
     $this->assertEqual($weights, $expected_weights, t('Helper reports correct weights for the modules.'));
