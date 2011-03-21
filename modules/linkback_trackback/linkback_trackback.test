@@ -43,7 +43,7 @@ class LinkbackTrackbackReceiveTestCase extends DrupalWebTestCase {
 
   /**
    * Test that nodes correctly add the trackback RDF metadata when configured
-   * receive linkbacks.
+   * to receive linkbacks.
    */
   function testRdfMetadataAddedToNodes() {
 
