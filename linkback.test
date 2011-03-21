@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @file
  * Tests for the linkback module.
@@ -149,6 +148,7 @@ class LinkbackSendTestCase extends DrupalWebTestCase {
   function testFieldExtraction() {
     $source_text = "Example plain text which suggests the links http://example.com/ and http://foo.example.com/bar/x.html";
 
+    // Dummy node, not to be used with drupalCreateNode().
     $node = new stdClass;
     $node->type = 'linkback_dummy_contenttype';
     $node->body = array(
@@ -196,7 +196,7 @@ class LinkbackSendTestCase extends DrupalWebTestCase {
     $target = "http://example.com/";
     $handler_result = linkback_send_single_linkback($source, $target, $node);
     $this->assertTrue($handler_result, t('The dummy linkback handler reports success.'));
-    
+
     $linkback_is_recorded = linkback_is_sent($node->nid, $target);
     $this->assertTrue($linkback_is_recorded, t('The linkback has been tracked in the DB.'));
   }
