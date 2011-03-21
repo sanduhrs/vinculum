@@ -218,8 +218,8 @@ function linkback_node_load($nodes, $types) {
     // Fallback to defaults.
     else {
       $node_type = $nodes[$nid]->type;
-      $nodes[$nid]->linkback_send    = variable_get("linkback_receive_{$node_type}", TRUE);
-      $nodes[$nid]->linkback_receive = variable_get("linkback_send_{$node_type}", TRUE);
+      $nodes[$nid]->linkback_send    = variable_get("linkback_send_{$node_type}", TRUE);
+      $nodes[$nid]->linkback_receive = variable_get("linkback_receive_{$node_type}", TRUE);
     }
   }
 }
@@ -717,12 +717,11 @@ function _linkback_node_get_settings($nids) {
  * linkbacks as needed.
  */
 function _linkback_node_save($node) {
-
   // If a custom send/receive setting has not been provided, use the default
   // setting for this node-type.
   $settings = array(
-    'send'    => isset($node->linkback_send)    ? $node->linkback_send    : variable_get("linkback_send_{$node->type}", TRUE),
-    'receive' => isset($node->linkback_receive) ? $node->linkback_receive : variable_get("linkback_send_{$node->type}", TRUE),
+    'send'    => isset($node->linkback_send)    ? (bool) $node->linkback_send    : variable_get("linkback_send_{$node->type}", TRUE),
+    'receive' => isset($node->linkback_receive) ? (bool) $node->linkback_receive : variable_get("linkback_receive_{$node->type}", TRUE),
   );
 
   // Update the flags in {node_linkback_settings}.
@@ -731,8 +730,9 @@ function _linkback_node_save($node) {
       'nid' => $node->nid,
       ))
     ->fields(array(
-      'send'    => $settings['send'],
-      'receive' => $settings['receive'],
+      // Cast the booleans to an int, to match the db data-type.
+      'send'    => (int) $settings['send'],
+      'receive' => (int) $settings['receive'],
     ))
     ->execute();
 
