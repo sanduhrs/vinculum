@@ -242,6 +242,7 @@ function linkback_node_update($node) {
 
 /**
  * Implements hook_linkback_get_external_links().
+ * Gets all the URLs found in the body field of a node.
  *
  * @return Array
  * A list of external links found within the BODY field.
@@ -274,20 +275,13 @@ function linkback_linkback_link_send_alter(&$links, $node) {
 
 /**
  * Register the receipt of a linkback.
- * Handlers calling this are responsible for looking up the node's nid
- * according to their protocol behaviour.
  *
- * This function will trigger linkback actions (such as add-comment).
+ * If the linkback has not been validated, this function will call the
+ * validation handlers.
+ * This function will trigger linkback actions (such as add-comment) when a
+ * linkback has been successfully validated.
  *
- * @param Object  $record
- * @param String  $record->handler The handler which is registering this
- *                                 linkback.
- * @param String  $record->nid     The node nid.
- * @param String  $record->source  The URL of the third-party post.
- * @param Array   $record->data    Any additional meta-data the handler wishes
- *                                 to provide.
- * @param Boolean $record->valid   Set to TRUE if the linkback has already been
- *                                 validated.
+ * @param Object $linkback A linkback object.
  *
  * @return Int
  * 0 is returned if the linkback was successfully added.
@@ -295,10 +289,13 @@ function linkback_linkback_link_send_alter(&$links, $node) {
  * the linkback already exists, or an anti-spam module prevented the pingback,
  * etc). @see linkback_validation_error_codes.
  */
-function linkback_receive($record) {
+function linkback_receive(linkback $linkback) {
+
   // Validate the linkback request, if it's not already validated.
-  if (empty($record->valid)) {
-    $validation_result = linkback_receive_validate($record);
+  if (empty($linkback->validated)) {
+    $validation_result = linkback_receive_validate($linkback);
+
+    // If it's invalid, abort here.
     if (!$validation_result == LINKBACK_VALIDATES) {
       return $validation_result;
     }
@@ -307,37 +304,29 @@ function linkback_receive($record) {
   // Write an entry in the linkback tracker table.
   db_merge('node_linkback_received')
     ->key(array(
-      'nid' => $record->nid,
-      'url' => $record->source,
+      'nid' => $linkback->nid,
+      'url' => $linkback->url,
       ))
     ->fields(array(
-      'handler' => $record->handler,
-      'timestamp' => time(),
+      'handler'   => $linkback->handler,
+      'origin_ip' => $linkback->origin_ip,
+      'timestamp' => $linkback->timestamp,
     ))
     ->execute();
-
 
   // Fire hook_linkback_received_action().
   // Actions are implemented through:
   // - linkback_trigger - supports the core trigger module.
   // - linkback_rules - integrates with the rules module.
-  module_invoke_all('linkback_received_action'. $record);
+  module_invoke_all('linkback_received_action', $linkback);
 
 }
 
 
 /**
  * Validate the receipt of a linkback.
- * Handlers calling this are responsible for looking up the node's nid
- * according to their protocol behaviour.
  *
- * @param Object  $record
- * @param String  $record->handler The handler which is registering this
- *                                 linkback.
- * @param String  $record->nid     The node nid.
- * @param String  $record->source  The URL of the third-party post.
- * @param Array   $record->data    Any additional meta-data the handler wishes
- *                                 to provide.
+ * @param Object $linkback A linkback object.
  *
  * @return Int
  * 0 is returned if the linkback validates.
@@ -347,18 +336,18 @@ function linkback_receive($record) {
  *
  * @see linkback_validation_error_codes.
  */
-function linkback_receive_validate($record) {
+function linkback_receive_validate(linkback $linkback) {
   // Validate that the node accepts pingbacks.
-  $node = node_load($record->nid);
+  $node = node_load($linkback->nid);
   if (!$node) {
     return LINKBACK_ERROR_LOCAL_NODE_NOT_FOUND;
   }
   // Check that the node permits linkbacks.
-  elseif (!linkback_node_access($node, 'receive')) {
+  elseif (!linkback_node_allows_linkback($node, 'receive')) {
     return LINKBACK_ERROR_LOCAL_NODE_LINKBACK_NOT_ALLOWED;
   }
   // Check that the linkback isn't already registered.
-  elseif (linkback_is_received($record->nid, $record->source)) {
+  elseif (linkback_is_received($linkback->nid, $linkback->url)) {
     return LINKBACK_ERROR_LINKBACK_ALREADY_REGISTERED;
   }
 
@@ -367,13 +356,16 @@ function linkback_receive_validate($record) {
   // node.
   if (variable_get('linkback_validate_remote_pages', FALSE)) {
     // Validate that the remote node is reachable.
-    $result = drupal_http_request($target);
+    $result = drupal_http_request($linkback->url);
+
     // Treat all HTTP errors (inc Forbidden) as remote URL not found.
     if ($result->error) {
       return LINKBACK_ERROR_REMOTE_URL_NOT_FOUND;
     }
-    $content = $result->data;
+
     // Check the content for a link to the local node.
+    $content = $result->data;
+    // Extract all the URLs from the page content.
     $urls = _linkback_extract_urls($content);
     $matched = FALSE;
     foreach ($urls as $url) {
@@ -391,6 +383,7 @@ function linkback_receive_validate($record) {
 
   return LINKBACK_VALIDATES;
 }
+
 
 /**
  * Parse a node and send linkbacks to the discovered URLs (which haven't 

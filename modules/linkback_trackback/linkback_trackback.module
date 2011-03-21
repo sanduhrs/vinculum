@@ -21,19 +21,16 @@ function linkback_trackback_menu() {
   // END-POINT for trackback registration. Not for humans!
   $items['node/%node/trackback'] = array(
     'title' => 'Trackbacks',
-    'page callback' => 'linkback_receive_trackback',
+    'page callback' => 'linkback_trackback_receive',
     'page arguments' => array(1),
     // This URL is accessible according to the node's visibility to ANONYMOUS
     // users and whether 'Receive linkbacks' is allowed on the node.
-    'access callback' => 'linkback_trackback_node_access',
-    // The use of drupal_anonymous_user() passes the anonymous user object to
-    // the access callback (and the object itself is cached in the menu
-    // registry, so drupal_anonymous_user() is not called for each request to
-    // this URL).
-    'access arguments' => array(1, drupal_anonymous_user()),
-    'file' => 'linkback.admin.inc',
+    'access callback' => 'linkback_node_allows_linkback',
+    'access arguments' => array(1, 'receive'),
+    'file' => 'linkback_trackback.pages.inc',
     'type' => MENU_CALLBACK,
   );
+
   return $items;
 }
 
@@ -75,14 +72,6 @@ function _linkback_add_trackback_receive($node) {
 
 
 /**
- * Menu callback to register a trackback.
- */
-function linkback_receive_trackback($node) {
-  
-}
-
-
-/**
  * The trackback endpoint for each node is at:
  * node/%node/trackback
  */
@@ -90,3 +79,41 @@ function _linkback_get_trackback_endpoint($node) {
   return url("node/{$node->nid}/trackback", array('absolute' => TRUE));
 }
 
+/**
+ * Save a new trackback.
+ *
+ * @param Object $trackback
+ */
+function linkback_trackback_save_trackback($trackback) {
+  // Build a linkback object.
+  $linkback = new linkback($trackback->nid, $trackback->url, 'linkback_trackback');
+  $linkback->data = $trackback;
+
+  // The linkback_receive_validate() function handles delegated validation.
+  $result = linkback_receive_validate($linkback);
+  if ($result != LINKBACK_VALIDATES) {
+    return $result;
+  }
+  else {
+    // Mark the record as valid, to save the overhead of re-validation.
+    $linkback->isValid();
+  }
+
+  // Write an entry in the trackback tracker table.
+  db_merge('linkback_trackback_received')
+    ->key(array(
+      'nid' => $trackback->nid,
+      'url' => $trackback->url,
+      ))
+    ->fields(array(
+      'blog_name' => $trackback->blog_name,
+      'title'     => $trackback->title,
+      'excerpt'   => $trackback->excerpt,
+      'origin_ip' => ip_address(),
+      'timestamp' => time(),
+    ))
+    ->execute();
+
+  // Call the API to register receipt of the linkback.
+  linkback_receive($linkback);
+}

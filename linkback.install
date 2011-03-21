@@ -62,7 +62,7 @@ function linkback_schema() {
         'length' => 255,
         'default' => '',
       ),
-      'linkback_handler' => array(
+      'handler' => array(
         'description' => "The linkback handler (i.e. the module's name) which reported success.",
         'type' => 'varchar',
         'length' => 255,
@@ -97,10 +97,17 @@ function linkback_schema() {
         'length' => 255,
         'default' => '',
       ),
-      'linkback_handler' => array(
-        'description' => 'The handler which reported the linkback.',
-        'type' => 'int',
-        'default' => 0,
+      'handler' => array(
+        'description' => 'The handler (module) which reported the linkback (e.g. pingback, trackback, etc).',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'origin_ip' => array(
+        'description' => 'Identifier of the origin, such as an IP address or hostname.',
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => '',
       ),
       'timestamp' => array(
         'description' => 'The Unix timestamp when the linkback was received.',

@@ -43,6 +43,18 @@ function linkback_trackback_schema() {
         'description' => "Excerpt of the third-party's post",
         'type' => 'text',
       ),
+      'origin_ip' => array(
+        'description' => 'Identifier of the origin, such as an IP address or hostname.',
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => '',
+      ),
+      'timestamp' => array(
+        'description' => 'The Unix timestamp when the trackback was received.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
     ),
     'indexes' => array(
       'nid' => array('nid'),

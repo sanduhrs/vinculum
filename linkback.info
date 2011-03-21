@@ -3,5 +3,6 @@ description = Provides pingback and trackback support.
 core = 7.x
 package = Linkback
 files[] = linkback.module
+files[] = linkback.class.inc
 files[] = linkback.test
 configure = admin/config/content/linkback
