@@ -1,0 +1,8 @@
+name = Linkback - Comment
+description = Add a comment when a linkback is received.
+core = 7.x
+package = Linkback
+dependencies[] = linkback
+dependencies[] = comment
+files[] = linkback_comment.module
+files[] = linkback_comment.test

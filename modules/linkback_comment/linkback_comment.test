@@ -1,0 +1,46 @@
+<?php
+/**
+ * @file
+ * Tests for the linkback comment module.
+ */
+
+/**
+ * Test that comments are added when a linkback is received.
+ */
+class LinkbackCommentTestCase extends DrupalWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Comments',
+      'description' => 'Test that a comment is added when a linkback is received.',
+      'group' => 'Linkback',
+    );
+  }
+
+  function setUp() {
+    parent::setUp('linkback', 'linkback_comment');
+
+    // Create a content-type; enable it to receive linkbacks.
+    $type_machine_name = 'dummy_contenttype1';
+    $type = array(
+      'type' => $type_machine_name,
+      'name' => st('Linkback dummy content-type 1'),
+      'base' => 'node_content',
+      'description' => st("A dummy content-type, used for testing the Linkback Trackback module. This content-type should not be visible."),
+      'custom' => 1,
+      'modified' => 1,
+      'locked' => 0,
+    );
+    $type = node_type_set_defaults($type);
+    node_type_save($type);
+    node_add_body_field($type);
+
+    // Enable linkback-receive for this content-type.
+    variable_set("linkback_send_{$type_machine_name}", FALSE);
+    variable_set("linkback_receive_{$type_machine_name}", TRUE);
+  }
+
+
+
+}
+
