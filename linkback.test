@@ -209,7 +209,7 @@ class LinkbackSendTestCase extends DrupalWebTestCase {
       This is a section of test text which <a href='http://example.com/'>links
       to example</a> and <a href='http://foo.example.com/bar/x.html'>links to
       another example</a>.";
-  
+
     $settings = array(
       'type' => 'linkback_dummy_contenttype',
       'title' => 'Example node used for testing the linkback module.',

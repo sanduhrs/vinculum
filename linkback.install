@@ -5,13 +5,13 @@
  */
 
 /**
- * Implementation of hook_schema().
+ * Implements hook_schema().
  */
 function linkback_schema() {
   // Provide the tables:
   // - node_linkback_settings Flags which show if linkback send/receive is
   //                          enabled for a given node.
-  // - node_linkback_sent     A list of the linkbacks which have already been 
+  // - node_linkback_sent     A list of the linkbacks which have already been
   //                          sent for a given node.
   // - node_linkback_received A list of the linkbacks which have been received
   //                          for a given node.
@@ -126,7 +126,7 @@ function linkback_schema() {
 
 
 /**
- * Implementation of hook_uninstall().
+ * Implements hook_uninstall().
  */
 function linkback_uninstall() {
   // Query the variables-table for a list of all variables provided by the

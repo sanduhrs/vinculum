@@ -32,7 +32,7 @@ function linkback_settings_form($form) {
   foreach ($handlers as $handler) {
     $form['handlers'][$handler->module] = array(
       '#type' => 'weight',
-      '#title' => $handler->protocol,
+      '#title' => check_plain($handler->protocol),
       '#default_value' => $handler->weight,
       '#attributes' => array(
         'class' => array('linkback-handler-weight'),
@@ -79,7 +79,6 @@ function theme_linkback_settings_handlers_form_element($variables) {
         'weight' => drupal_render($form[$key]),
       ),
       'class' => array('draggable'),
-      
     );
   }
 

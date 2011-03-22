@@ -114,7 +114,7 @@ function linkback_pingback_target_supports_pingback($url) {
     return check_url($result->headers['X-Pingback']);
   }
   // Do a full request for the page, check for a <link> tag.
-  else if (!$result->error) {
+  elseif (!$result->error) {
     $result = drupal_http_request($target);
     if (!$result->error) {
       // This regexp is the one provided in the spec.
@@ -153,7 +153,7 @@ function linkback_pingback_xmlrpc() {
 function linkback_pingback_node_view($node, $view_mode, $langcode) {
   if ($view_mode == 'full' && linkback_node_allows_linkback($node, 'receive')) {
     // The end-point URL is the standard drupal XML-RPC end-point.
-    $pingback_endpoint = $GLOBALS['base_url'] .'/xmlrpc.php';
+    $pingback_endpoint = $GLOBALS['base_url'] . '/xmlrpc.php';
 
     // Add both a HTTP header and a <link> tag.
     drupal_add_http_header('X-Pingback', $pingback_endpoint);
@@ -203,7 +203,7 @@ function linkback_pingback_receive_pingback($sourceURI, $targetURI) {
  *
  * @return Int
  *    0 is returned when the pingback is successfully saved.
- *    Any other result is an error-code: @see linkback_pingback_error_codes.
+ *    Any other result is an error-code: see linkback_pingback_error_codes.
  */
 function linkback_pingback_save_pingback($pingback) {
   // Find the nid of the local node, using the URL provided in the pingback.
@@ -251,7 +251,7 @@ function linkback_pingback_save_pingback($pingback) {
  * Lookup a pingback-specific error-code, given an error-code as defined in the
  * linkback module.
  *
- * @see linkback_pingback_error_codes.
+ * @see linkback_pingback_error_codes
  */
 function linkback_pingback_lookup_custom_error_code($error_code) {
   switch ($error_code) {
@@ -290,7 +290,7 @@ function linkback_pingback_lookup_custom_error_code($error_code) {
  * Provide a human-readable error message for an error-code.
  *
  * @param Int $error_code.
- * A numeric error-code - @see linkback_pingback_error_codes.
+ * A numeric error-code - see linkback_pingback_error_codes.
  */
 function _linkback_pingback_get_error_message($error_code) {
 

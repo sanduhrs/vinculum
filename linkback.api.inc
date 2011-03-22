@@ -19,14 +19,14 @@
 /**
  * Declare a linkback handler.
  *
- * This is a hook used by linkback handler modules. It allows a module to 
+ * This is a hook used by linkback handler modules. It allows a module to
  * define a handler which implements a linkback protocol.
  *
  * @return
  *   An array containing the key 'protocol' which provides the human-readable
  *   name of the protocol implemented.  A linkback module can only implement a
  *   single handler.
- *  
+ *
  * @ingroup linkback_api_hooks
  */
 function hook_linkback_handler() {
@@ -50,7 +50,7 @@ function hook_linkback_handler() {
  * TRUE if the handler was successful in reporting the linkback.
  */
 function hook_linkback_send($target, $source, $node) {
-  
+
 }
 
 /**
@@ -58,7 +58,7 @@ function hook_linkback_send($target, $source, $node) {
  * the body field.
  */
 function hook_linkback_get_external_links($node) {
-  
+
 }
 
 /**
@@ -71,9 +71,9 @@ function hook_linkback_get_external_links($node) {
  */
 function hook_linkback_link_send_alter(&$links) {
   // Don't attempt linkbacks on example.com domains.
-  foreach($links as $key => $record) {
+  foreach ($links as $key => $record) {
     if (preg_match('#\.example\.com$#', $record->target)) {
-      unset ($links[$key]);
+      unset($links[$key]);
     }
   }
 }
@@ -82,7 +82,7 @@ function hook_linkback_link_send_alter(&$links) {
  * Actions to be fired when a linkback is received.
  */
 function hook_linkback_received_action($record) {
-  
+
 }
 
 /**

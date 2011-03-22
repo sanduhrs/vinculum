@@ -79,8 +79,12 @@ class LinkbackTrackbackReceiveTestCase extends DrupalWebTestCase {
     $tb_url = url("node/{$node->nid}/trackback", array('absolute' => TRUE));
 
     $rdf_text = "\n<!--\n";
-    $rdf_text .= '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:trackback="http://madskills.com/public/xml/rss/module/trackback/">'."\n";
-    $rdf_text .= "\t" . '<rdf:Description rdf:about="'. $url .'" dc:identifier="'. $url .'" dc:title="'. strtr(check_plain($node->title), array('--' => '&mdash;')) .'" trackback:ping="'. $tb_url .'" />'."\n";
+    $rdf_text .= '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:trackback="http://madskills.com/public/xml/rss/module/trackback/">' . "\n";
+    $rdf_text .= "\t" . '<rdf:Description';
+    $rdf_text .= ' rdf:about="' . $url . '"';
+    $rdf_text .= ' dc:identifier="' . $url . '"';
+    $rdf_text .= ' dc:title="' . strtr(check_plain($node->title), array('--' => '&mdash;')) . '"';
+    $rdf_text .= ' trackback:ping="' . $tb_url . '" />' . "\n";
     $rdf_text .= '</rdf:RDF>';
     $rdf_text .= "\n-->\n";
 
@@ -114,7 +118,7 @@ class LinkbackTrackbackReceiveTestCase extends DrupalWebTestCase {
       ),
     );
     $node = $this->drupalCreateNode($settings);
-  
+
     // Submit a trackback request to /node/nnn/trackback.
     // Provide the GET parameters:
     // - url       The URL of the remote page which links to our site.
@@ -159,7 +163,7 @@ class LinkbackTrackbackReceiveTestCase extends DrupalWebTestCase {
    * trackback requests.
    */
   // function testTrackbackEndpointRejectsInvalidTrackbacks() {
-  //   
+  //
   // }
 
 }

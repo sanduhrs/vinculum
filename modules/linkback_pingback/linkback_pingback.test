@@ -21,7 +21,7 @@ class LinkbackPingbackReceiveTestCase extends DrupalWebTestCase {
   function setUp() {
     parent::setUp('linkback', 'linkback_pingback');
 
-    $this->xmlrpc_url = $GLOBALS['base_url'] .'/xmlrpc.php';
+    $this->xmlrpc_url = $GLOBALS['base_url'] . '/xmlrpc.php';
 
     // Create a content-type; enable it to receive linkbacks.
     $type_machine_name = 'dummy_contenttype1';

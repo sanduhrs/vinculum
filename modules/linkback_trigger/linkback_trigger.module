@@ -69,7 +69,7 @@ function linkback_create_comment_action__submit($form, $form_state) {
  */
 function linkback_trigger_linkback_received_action($record) {
   // Fire the linkback_receive trigger when a linkback is sent.
-  drupal_set_message('the linkback hook is fired.');
+  drupal_set_message('DEBUG: the linkback hook is fired.');
   watchdog('lb', 'linkback hook fired.');
 }
 
