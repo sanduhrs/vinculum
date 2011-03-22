@@ -542,13 +542,18 @@ function linkback_send_single_linkback($source, $target, $node) {
  * The node nid (if a match for the URL is found), or FALSE.
  */
 function linkback_lookup_nid($url) {
+  // Strip the domain from the URL (if present).
+  if (preg_match('#^(https?://[^/]+/).*#', $url, $matches)) {
+    $url = substr($url, strlen($matches[1]));
+  }
+
   // Lookup URL aliases.
   if ($local_path = drupal_lookup_path('source', $url)) {
     $url = $local_path;
   }
 
   if (preg_match('#^node/(\d+)$#', $url, $matches)) {
-    return $matches[1];
+    return (int) $matches[1];
   }
   return FALSE;
 }
