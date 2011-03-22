@@ -67,7 +67,7 @@ function linkback_help($path, $arg) {
     // The configuration page.
     case 'admin/config/content/linkback':
       $output = '';
-      $output .= '<p>' . t('The linkback handlers are prioritised by module-weight.') .'</p>';
+      $output .= '<p>' . t('The linkback handlers are prioritised by module-weight.') . '</p>';
       return $output;
   }
 }
@@ -287,7 +287,9 @@ function linkback_linkback_link_send_alter(&$links, $node) {
  * 0 is returned if the linkback was successfully added.
  * A positive numeric error-code is returned if the linkback was declined (e.g.
  * the linkback already exists, or an anti-spam module prevented the pingback,
- * etc). @see linkback_validation_error_codes.
+ * etc).
+ *
+ * @see linkback_validation_error_codes
  */
 function linkback_receive(linkback $linkback) {
 
@@ -334,7 +336,7 @@ function linkback_receive(linkback $linkback) {
  * (e.g. the linkback already exists, or an anti-spam module prevented the
  * pingback, etc).
  *
- * @see linkback_validation_error_codes.
+ * @see linkback_validation_error_codes
  */
 function linkback_receive_validate(linkback $linkback) {
   // Validate that the node accepts pingbacks.
@@ -386,7 +388,7 @@ function linkback_receive_validate(linkback $linkback) {
 
 
 /**
- * Parse a node and send linkbacks to the discovered URLs (which haven't 
+ * Parse a node and send linkbacks to the discovered URLs (which haven't
  * already recorded a successful linkback).
  * Note that this function does not respect the node's "linkback_send" property
  * - modules which invoke this function directly should check the node's
@@ -431,9 +433,9 @@ function linkback_node_allows_linkback($node, $op) {
 /**
  * Get a list of external links from a node.
  *
- * This uses hook_linkback_get_external_links.  By default, the linkback module
- * checks only the BODY field.  Create an implementation of
- * hook_linkback_get_external_links() to check other fields.
+ * This invokes hook_linkback_get_external_links.
+ * By default, the linkback module checks only the BODY field.  Create an
+ * implementation of hook_linkback_get_external_links() to check other fields.
  *
  * @param Object $node
  * The node to check.
@@ -519,7 +521,7 @@ function linkback_send_single_linkback($source, $target, $node) {
           'url' => $target,
           ))
         ->fields(array(
-          'linkback_handler' => $handler->module,
+          'handler' => $handler->module,
         ))
         ->execute();
       // Stop at the first successful handler.
@@ -544,7 +546,7 @@ function linkback_send_single_linkback($source, $target, $node) {
 function linkback_lookup_nid($url) {
   // Strip the domain from the URL (if present).
   if (preg_match('#^(https?://[^/]+/).*#', $url, $matches)) {
-    $url = substr($url, strlen($matches[1]));
+    $url = drupal_substr($url, drupal_strlen($matches[1]));
   }
 
   // Lookup URL aliases.
@@ -595,7 +597,7 @@ function linkback_is_sent($nid, $url) {
     ->fields('nls', array('nid'))
     ->condition("nls.nid", $nid)
     ->condition("nls.url", $url)
-    ->isNotNull('nls.linkback_handler')
+    ->isNotNull('nls.handler')
     ->execute()
     ->fetchField();
   return (bool) $result;
@@ -615,7 +617,7 @@ function linkback_get_handler($handler = NULL) {
   if (is_null($handler)) {
     return $handlers;
   }
-  else if (isset($handlers[$handler])) {
+  elseif (isset($handlers[$handler])) {
     return $handlers[$handler];
   }
   else {
