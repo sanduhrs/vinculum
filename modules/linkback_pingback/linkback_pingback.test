@@ -1,0 +1,148 @@
+<?php
+/**
+ * @file
+ * Tests for the linkback pingback module.
+ */
+
+/**
+ * Test that the list of handlers is loaded properly.
+ */
+class LinkbackPingbackReceiveTestCase extends DrupalWebTestCase {
+  protected $xmlrpc_url;
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Pingback: receiving pingbacks',
+      'description' => 'Test the pingback metadata is added to nodes which are enabled for receiving linkbacks, and that the receiving mechanism correctly stores pingbacks.',
+      'group' => 'Linkback',
+    );
+  }
+
+  function setUp() {
+    parent::setUp('linkback', 'linkback_pingback');
+
+    $this->xmlrpc_url = $GLOBALS['base_url'] .'/xmlrpc.php';
+
+    // Create a content-type; enable it to receive linkbacks.
+    $type_machine_name = 'dummy_contenttype1';
+    $type = array(
+      'type' => $type_machine_name,
+      'name' => st('Linkback dummy content-type 1'),
+      'base' => 'node_content',
+      'description' => st("A dummy content-type, used for testing the Linkback Trackback module. This content-type should not be visible."),
+      'custom' => 1,
+      'modified' => 1,
+      'locked' => 0,
+    );
+    $type = node_type_set_defaults($type);
+    node_type_save($type);
+    node_add_body_field($type);
+
+    // Enable linkback-receive for this content-type.
+    variable_set("linkback_send_{$type_machine_name}", FALSE);
+    variable_set("linkback_receive_{$type_machine_name}", TRUE);
+  }
+
+
+  /**
+   * Test that nodes correctly add the pingback <link> tag and HTTP header when
+   * configured to receive linkbacks.
+   */
+  function testPingbackMetadataAddedToNodes() {
+
+    // Create a new node.
+    $settings = array(
+      'type' => 'dummy_contenttype1',
+      'title' => 'Example node used for testing the linkback pingback module.',
+      'body' => array(
+        LANGUAGE_NONE => array(
+          0 => array(
+            'value' => "Lorem ipsum dolizzle gizzle tellivizzle, dawg adipiscing sure. Nullizzle sapizzle velizzle, shit volutpat, suscipizzle quizzle, gravida brizzle, pizzle. Pellentesque break it down tortizzle",
+            'format' => filter_default_format(),
+          ),
+        ),
+      ),
+    );
+    $node = $this->drupalCreateNode($settings);
+
+    // Get the node's page. It should have a pingback <link> tag on it.
+    $this->drupalGet("node/{$node->nid}");
+
+    $elements = $this->xpath('//link[@rel=:rel and @href=:href]', array(
+      ':rel' => 'pingback',
+      ':href' => $this->xmlrpc_url,
+    ));
+    $this->assertEqual(count($elements), 1, t('The Pingback <link> tag is added to nodes when linkbacks are enabled.'));
+
+    $header = $this->drupalGetHeader('X-Pingback');
+    $this->assertEqual($header, $this->xmlrpc_url, t('The Pingback HTTP header is added to nodes when linkbacks are enabled.'));
+
+
+    // Re-configure the node to disable linkback-receive.
+    $node->linkback_receive = FALSE;
+    _linkback_node_save($node);
+
+    $this->drupalGet("node/{$node->nid}");
+
+    $elements = $this->xpath('//link[@rel=:rel and @href=:href]', array(
+      ':rel' => 'pingback',
+      ':href' => $this->xmlrpc_url,
+    ));
+    $this->assertEqual(count($elements), 0, t('The Pingback <link> tag is not added to nodes when linkbacks are disabled.'));
+
+    $header = $this->drupalGetHeader('X-Pingback');
+    $this->assertFalse($header, t('The Pingback HTTP header is not added to nodes when linkbacks are disabled.'));
+  }
+
+
+
+  /**
+   * Test that the pingback XML-RPC endpoint accepts valid pingback requests.
+   */
+  function testPingbackEndpointAcceptsValidPingbacks() {
+    // Create a new node.
+    $settings = array(
+      'type' => 'dummy_contenttype1',
+      'title' => 'Example node used for testing the linkback trackback module.',
+      'body' => array(
+        LANGUAGE_NONE => array(
+          0 => array(
+            'value' => "Lorem ipsum dolizzle gizzle tellivizzle, dawg adipiscing sure. Nullizzle sapizzle velizzle, shit volutpat, suscipizzle quizzle, gravida brizzle, pizzle. Pellentesque break it down tortizzle",
+            'format' => filter_default_format(),
+          ),
+        ),
+      ),
+    );
+    $node = $this->drupalCreateNode($settings);
+
+
+    // Attempt to record a pingback for that node.
+    $source = 'http://example.com/foshizzles';
+    $target = url("node/{$node->nid}", array('absolute' => TRUE));
+    $methods = array(
+      'pingback.ping' => array($source, $target),
+    );
+    // XMLRPC requests will be automatically dispatched to the simpletest
+    // instance, not the actual site.
+    xmlrpc($this->xmlrpc_url, $methods);
+
+    // Check that pingback and linkback records have been created.
+    $result = db_select('linkback_pingback_received', 'l')
+      ->fields('l')
+      ->condition('l.nid', $node->nid)
+      ->condition('l.url', 'http://example.com/foshizzles')
+      ->execute()
+      ->fetchAll();
+    $this->assertEqual(1, count($result), t('A pingback record has been saved to the linkback_pingback_received table.'));
+
+    $result = db_select('node_linkback_received', 'l')
+      ->fields('l')
+      ->condition('l.nid', $node->nid)
+      ->condition('l.url', 'http://example.com/foshizzles')
+      ->execute()
+      ->fetchAll();
+    $this->assertEqual(1, count($result), t('A linkback record has been saved to the node_linkback_received table.'));
+  }
+
+}
+
