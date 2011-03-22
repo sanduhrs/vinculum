@@ -55,11 +55,24 @@ function linkback_pingback_linkback_handler() {
  *
  * Attempt to send a pingback.  The pingback protocol uses a simple static
  * schema: only the origin and target URLs are used.
+ *
+ * @param String $target
+ *   The remote URL.
+ * @param String $source
+ *   The URL of the local node.
+ * @param Object $node
+ *   The drupal node.
+ *
+ * @ingroup linkback
  */
 function linkback_pingback_linkback_send($target, $source, $node) {
   // Check whether the remote target supports pingbacks.
   if ($xmlrpc_endpoint = linkback_pingback_target_supports_pingback($target)) {
-    if (xmlrpc($xmlrpc_endpoint, 'pingback.ping', $source, $target)) {
+    $methods = array(
+      'pingback.ping' => array($source, $target),
+    );
+    $result = xmlrpc($this->xmlrpc_url, $methods);
+    if ($result) {
       $params = array(
         '%source' => $source,
         '%target' => $target,
@@ -91,6 +104,8 @@ function linkback_pingback_linkback_send($target, $source, $node) {
  * @return String|FALSE
  * If pingbacks are supported by the remote server, the URL of the XML-RPC
  * pingback endpoint is returned.
+ *
+ * @ingroup linkback
  */
 function linkback_pingback_target_supports_pingback($url) {
   // Check for an X-Pingback header.
@@ -121,6 +136,8 @@ function linkback_pingback_xmlrpc() {
     array(
       'pingback.ping',
       'linkback_pingback_receive_pingback',
+      // Return value is a string.
+      // There are 2 string parameters.
       array('string', 'string', 'string'),
       t('Handles pingback pings.'),
     ),
@@ -151,16 +168,17 @@ function linkback_pingback_node_view($node, $view_mode, $langcode) {
  * XML-RPC callback for the pingback.ping method.
  *
  * @param String $sourceURI
- * The URL of the third-party post.
+ *   The URL of the third-party post.
  * @param String $targetURI
- * The URL of the node on this site.
+ *   The URL of the node on this site.
  */
 function linkback_pingback_receive_pingback($sourceURI, $targetURI) {
   // The pingback protocol defines a static schema of 2 fields: sourceURI and
   // targetURI. No other data may be exchanged within the pingback protocol.
-  $record = (object) array(
+  $pingback = (object) array(
     'sourceURI' => $sourceURI,
     'targetURI' => $targetURI,
+    'origin_ip' => ip_address(),
   );
 
   // Attempt to save the pingback.  Non-zero results indicate an error.
@@ -169,6 +187,9 @@ function linkback_pingback_receive_pingback($sourceURI, $targetURI) {
     $error_message = _linkback_pingback_get_error_message($result);
     return xmlrpc_server_error($result, $error_message);
   }
+
+  $message = t('Pingback from @source to @target registered.', array('@source' => $sourceURI, '@target' => $targetURI));
+  return $message;
 }
 
 /**
@@ -177,6 +198,8 @@ function linkback_pingback_receive_pingback($sourceURI, $targetURI) {
  * @param Object $pingback
  * @param String $pingback->sourceURI The URL of the third-party post.
  * @param String $pingback->targetURI The URL of the local node.
+ * @param String $pingback->origin_ip The IP address which submitted the
+ *                                    pingback request.
  *
  * @return Int
  *    0 is returned when the pingback is successfully saved.
@@ -190,66 +213,48 @@ function linkback_pingback_save_pingback($pingback) {
     return LINKBACK_PINGBACK_ERROR_LOCAL_NODE_NOT_FOUND;
   }
 
-  $record = new stdClass;
-  $record->handler = 'linkback_pingback';
-  $record->nid     = $nid;
-  $record->source  = $pingback->sourceURI;
-  $record->data    = $pingback;
+  // Build a linkback object.
+  $linkback = new linkback($nid, $pingback->sourceURI, 'linkback_pingback');
+  $linkback->data = $pingback;
 
-  $result = linkback_pingback_validate_pingback($record);
+  // Attempt to validate the linkback using the standard linkback API.
+  $result = linkback_receive_validate($linkback);
   if ($result != LINKBACK_VALIDATES) {
-    // The custom validation-handler provides error-codes which match those
-    // defined in the Pingback protocol.
-    return $result;
+    // Lookup a pingback-specific error-code (according to the pingback
+    // specification, which provides defined numeric constants for certain
+    // error conditions).
+    $pingback_error_code = linkback_pingback_lookup_custom_error_code($result);
+    return $pingback_error_code;
   }
   else {
     // Mark the record as valid, to save the overhead of re-validation.
-    $record->valid = TRUE;
+    $linkback->isValid();
   }
 
   // Write an entry in the pingback tracker table.
   db_merge('linkback_pingback_received')
     ->key(array(
-      'nid' => $record->nid,
-      'url' => $record->source,
+      'nid' => $linkback->nid,
+      'url' => $linkback->url,
       ))
     ->fields(array(
-      'timestamp' => time(),
+      'origin_ip' => $linkback->origin_ip,
+      'timestamp' => $linkback->timestamp,
     ))
     ->execute();
 
   // Call the API to register receipt of the linkback.
-  linkback_receive($record);
+  linkback_receive($linkback);
 }
 
 /**
- * Validate the receipt of a linkback.
- * Handlers calling this are responsible for looking up the node's nid
- * according to their protocol behaviour.
- *
- * @param Object  $record
- * @param String  $record->handler The handler which is registering this
- *                                 linkback.
- * @param String  $record->nid     The node nid.
- * @param String  $record->source  The URL of the third-party post.
- * @param Array   $record->data    Any additional meta-data the handler wishes
- *                                 to provide.
- *
- * @return Int
- * 0 is returned if the linkback validates.
- * A positive numeric error-code is returned if the linkback validation fails
- * (e.g. the linkback already exists, or an anti-spam module prevented the
- * pingback, etc).
+ * Lookup a pingback-specific error-code, given an error-code as defined in the
+ * linkback module.
  *
  * @see linkback_pingback_error_codes.
  */
-function linkback_pingback_validate_pingback($pingback) {
-  // Attempt to validate the linkback using the standard linkback API.
-  $result = linkback_receive_validate($record);
-
-  // Handle the error-code, to return an XML-RPC error with an error-code
-  // corresponding to those defined in the pingback protocol.
-  switch ($result) {
+function linkback_pingback_lookup_custom_error_code($error_code) {
+  switch ($error_code) {
     // Linkback is valid.
     case LINKBACK_VALIDATES:
       return LINKBACK_VALIDATES;
@@ -287,7 +292,7 @@ function linkback_pingback_validate_pingback($pingback) {
  * @param Int $error_code.
  * A numeric error-code - @see linkback_pingback_error_codes.
  */
-function _linkback_get_error_message($error_code) {
+function _linkback_pingback_get_error_message($error_code) {
 
   $errors = array(
     LINKBACK_PINGBACK_ERROR_REMOTE_URL_NOT_FOUND            => t('sourceURI not found.'),

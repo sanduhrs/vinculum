@@ -28,6 +28,12 @@ function linkback_pingback_schema() {
         'length' => 255,
         'default' => '',
       ),
+      'origin_ip' => array(
+        'description' => 'Identifier of the origin, such as an IP address or hostname.',
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => '',
+      ),
       'timestamp' => array(
         'description' => 'The Unix timestamp when the pingback was received.',
         'type' => 'int',
