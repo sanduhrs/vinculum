@@ -11,7 +11,7 @@ class LinkbackLoadHandlersTestCase extends DrupalWebTestCase {
 
   public static function getInfo() {
     return array(
-      'name' => 'Load handlers',
+      'name' => 'API: Load handlers',
       'description' => 'Test the registration of linkback handlers.',
       'group' => 'Linkback',
     );
@@ -115,7 +115,7 @@ class LinkbackSendTestCase extends DrupalWebTestCase {
 
   public static function getInfo() {
     return array(
-      'name' => 'Send linkbacks',
+      'name' => 'API: Send linkbacks',
       'description' => 'Test that linkbacks are sent when a node is saved.',
       'group' => 'Linkback',
     );
