@@ -223,7 +223,7 @@ function linkback_pingback_save_pingback($pingback) {
     // Lookup a pingback-specific error-code (according to the pingback
     // specification, which provides defined numeric constants for certain
     // error conditions).
-    $pingback_error_code = linkback_pingback_lookup_custom_error_code($result);
+    $pingback_error_code = _linkback_pingback_lookup_custom_error_code($result);
     return $pingback_error_code;
   }
   else {
@@ -247,13 +247,18 @@ function linkback_pingback_save_pingback($pingback) {
   linkback_receive($linkback);
 }
 
+
+/**********************************************************
+ * Private helper functions.
+ *********************************************************/
+
 /**
  * Lookup a pingback-specific error-code, given an error-code as defined in the
  * linkback module.
  *
  * @see linkback_pingback_error_codes
  */
-function linkback_pingback_lookup_custom_error_code($error_code) {
+function _linkback_pingback_lookup_custom_error_code($error_code) {
   switch ($error_code) {
     // Linkback is valid.
     case LINKBACK_VALIDATES:
@@ -283,8 +288,6 @@ function linkback_pingback_lookup_custom_error_code($error_code) {
       return LINKBACK_PINGBACK_UNKNOWN_ERROR;
   }
 }
-
-
 
 /**
  * Provide a human-readable error message for an error-code.
