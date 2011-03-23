@@ -819,10 +819,21 @@ function _linkback_list_permissions($type) {
 
 /**
  * Extract text from a single field-API field.
+ *
+ * @param Object $node
+ *   A drupal node.
+ *
+ * @return String
+ *   The text found in the node's body field.
  */
 function _linkback_extract_text($node) {
   $langcode = field_language('node', $node, 'body');
-  // Assume that $node->body[$langcode][0] is present.
+
+  // If body is empty, abort early.
+  if (!isset($node->body[$langcode][0])) {
+    return '';
+  }
+
   $item = $node->body[$langcode][0];
 
   // Use the API to generate a renderable array.  This allows all the regular
