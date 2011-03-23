@@ -4,6 +4,8 @@
  * Provide the Trackback protocol to the Linkback module.
  */
 
+// User-Agent to send when connecting to external sites.
+define ('LINKBACK_TRACKBACK_UA', 'Drupal Trackback (+http://drupal.org/project/linkback)');
 
 /**
  * Implements hook_linkback_handler().
@@ -15,10 +17,34 @@ function linkback_trackback_linkback_handler() {
 }
 
 /**
+ * Implements hook_linkback_send().
+ *
+ * Attempt to send a trackback to an external site.
+ */
+function linkback_trackback_linkback_send($target, $source, $node) {
+  // Check that the external URL supports trackback.
+  if ($trackback_endpoint_url = linkback_trackback_autodetect_trackback_support($target)) {
+
+    $params = array(
+      'url' => url("node/{$node->nid}", array('absolute' => TRUE)), 
+      'title' => $node->title,
+      // @TODO: extract an excerpt.
+      // 'excerpt' => 
+    );
+    // Allow other modules to change the data sent to the remote site, via
+    // hook_trackback_send_params_alter().
+    drupal_alter('trackback_send_params', $params);
+
+    // Attempt to send the trackback.
+    $result = linkback_trackback_send_trackback($trackback_endpoint_url, $params);
+  }
+}
+
+/**
  * Implements hook_menu().
  */
 function linkback_trackback_menu() {
-  // END-POINT for trackback registration. Not for humans!
+  // ENDPOINT for trackback registration. Not for humans!
   $items['node/%node/trackback'] = array(
     'title' => 'Trackbacks',
     'page callback' => 'linkback_trackback_receive',
@@ -34,57 +60,26 @@ function linkback_trackback_menu() {
   return $items;
 }
 
-
 /**
  * Implements hook_node_view().
  *
- * The trackback protocol is handled by a helper function, which may be
- * replaced by rdf-integration at some point.
+ * RDF meta-data is added to nodes which permit linkbacks, to allow third-
+ * parties to auto-discover Trackback support.
  */
 function linkback_trackback_node_view($node, $view_mode, $langcode) {
   if ($view_mode == 'full' && linkback_node_allows_linkback($node, 'receive')) {
-    _linkback_add_trackback_receive($node);
+    _linkback_add_trackback_autodiscovery_metadata($node);
   }
 }
 
 
-/**
- * Add the RDF which allows trackbacks to be tracked.
- *
- * @TODO: investigate integrating this with the RDF module.
- */
-function _linkback_add_trackback_receive($node) {
-  // Canonical URL to the node.
-  $url = url("node/{$node->nid}", array('absolute' => TRUE));
-  // Trackback end-point for this specific node.
-  $tb_url = _linkback_get_trackback_endpoint($node);
 
-  $rdf_text = "\n<!--\n";
-  $rdf_text .= '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:trackback="http://madskills.com/public/xml/rss/module/trackback/">' . "\n";
-  $rdf_text .= "\t" . '<rdf:Description';
-  $rdf_text .= ' rdf:about="' . $url . '"';
-  $rdf_text .= ' dc:identifier="' . $url . '"';
-  $rdf_text .= ' dc:title="' . strtr(check_plain($node->title), array('--' => '&mdash;')) . '"';
-  $rdf_text .= ' trackback:ping="' . $tb_url . '" />' . "\n";
-  $rdf_text .= '</rdf:RDF>';
-  $rdf_text .= "\n-->\n";
-
-  $node->content['trackback'] = array(
-    '#markup' => $rdf_text,
-  );
-}
-
+/**********************************************************
+ * Public API functions.
+ *********************************************************/
 
 /**
- * The trackback endpoint for each node is at:
- * node/%node/trackback
- */
-function _linkback_get_trackback_endpoint($node) {
-  return url("node/{$node->nid}/trackback", array('absolute' => TRUE));
-}
-
-/**
- * Save a new trackback.
+ * Save a new trackback (record a third-party site linking to the Drupal site).
  *
  * @param Object $trackback
  */
@@ -120,4 +115,308 @@ function linkback_trackback_save_trackback($trackback) {
 
   // Call the API to register receipt of the linkback.
   linkback_receive($linkback);
+}
+
+/**
+ * Test whether a URL has support for trackbacks.
+ *
+ * @param String $url
+ *  URL of the remote page.
+ *
+ * @return String|FALSE|NULL
+ * String: The endpoint URL for registering trackbacks.
+ * FALSE: The URL was successfully reached, and trackbacks are not suppported.
+ * NULL: The URL could not be successfully requested.
+ */
+function linkback_trackback_autodetect_trackback_support($url) {
+
+  // Do an initial check that the URL might support trackback auto-discovery
+  // (by checking its mime-type). Images/media are frequently linked by nodes,
+  // but these URLs would not support Trackback.
+  if (!$discoverable = _linkback_trackback_check_url_provides_parsable_content($url)) {
+    return $discoverable;
+  }
+
+
+  // Auto-discovery steps.
+  // From http://www.sixapart.com/pronet/docs/trackback_spec#Auto-Discovery_of_TrackBack_Ping_URLs:
+  //
+  // Given a URL my_url, clients should follow these steps:
+  //   1. Send an HTTP GET request to retrieve the contents of the page at my_url.
+  //   2. Scan the page contents for embedded RDF. Pages can contain multiple instances of embedded RDF--clients should pick the block whose dc:identifier matches my_url.
+  //   3. Extract the trackback:ping value from the block of RDF. This is the TrackBack Ping URL.
+
+  // Request the third-party URL.
+  $options = array(
+    'headers' => array(
+      'User-Agent' => LINKBACK_TRACKBACK_UA,
+    ),
+  );
+  $result = drupal_http_request($url, $options);
+
+  // If the request failed, abort early.
+  if (isset($result->error) || $result->code != 200 || empty($result->data)) {
+    return NULL;
+  }
+
+  // Test for Trackback endpoints within the page.
+  $endpoints = _linkback_trackback_extract_endpoint_from_html($result->data);
+
+  // Pages might list multiple endpoints: use the endpoint whose identifier
+  // matches the URL provided.
+  if (!isset($endpoints[$url])) {
+    drupal_set_message('not found');
+    return FALSE;
+  }
+  else {
+    drupal_set_message('found ' . $endpoints[$url]);
+    return $endpoints[$url];
+  }
+}
+
+/**
+ * Send a trackback request (notify a third-party site of a link).
+ *
+ * @param String $endpoint_url
+ *   The URL of the remote Trackback endpoint.
+ * @param Array $params
+ * - url       The URL of the local node (REQUIRED).
+ * - title     The title of the local node (optional).
+ * - excerpt   Excerpt from the local node (optional).
+ * - blog_name Name of the local site (optional; defaults to site-name).
+ *
+ * @return Boolean
+ * TRUE if the remote site reported success.
+ * FALSE if the remote site reported failure, or any other error occurred (e.g.
+ *   network error preventing the site from being reached).
+ */
+function linkback_trackback_send_trackback($endpoint_url, $params) {
+  if (!is_array($params) || empty ($params['url'])) {
+    throw new Exception ("The linkback_trackback_send_trackback() function requires that \$params['url'] is provided");
+  }
+  // Data to send in the trackback.
+  $params += array(
+    'blog_name' => variable_get('site_name', 'Drupal'),
+  );
+
+  $options = array(
+    // The Trackback protocol supports requires POST.
+    'method' => 'POST',
+    'headers' => array(
+      'User-Agent' => LINKBACK_TRACKBACK_UA,
+      'Content-Type' => 'application/x-www-form-urlencoded; charset=utf-8',
+    ),
+    // Add the data to send in the Trackback.
+    'data' => $params,
+  );
+  $result = drupal_http_request($url, $options);
+
+  // @TODO: Detect and log errors.
+
+}
+
+/**********************************************************
+ * Private helper functions.
+ *********************************************************/
+
+/**
+ * Get the Trackback API endpoint URL for a local node.
+ *
+ * The trackback endpoint for each node is at:
+ * node/%node/trackback
+ *
+ * @param Object $node
+ *   A drupal node.
+ *
+ * @return String
+ * The URL of the Trackback endpoint.
+ */
+function _linkback_get_trackback_endpoint($node) {
+  return url("node/{$node->nid}/trackback", array('absolute' => TRUE));
+}
+
+/**
+ * Add the RDF meta-data which allows third-party sites to auto-discover
+ * Trackback support.
+ *
+ * @TODO: investigate integrating this with the RDF module.
+ */
+function _linkback_add_trackback_autodiscovery_metadata($node) {
+
+  // Get the canonical URL to this node.
+  $url = url("node/{$node->nid}", array('absolute' => TRUE));
+
+  // Get the Trackback endpoint for this specific node.
+  $tb_url = _linkback_get_trackback_endpoint($node);
+
+  $rdf_text = "\n<!--\n";
+  $rdf_text .= '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:trackback="http://madskills.com/public/xml/rss/module/trackback/">' . "\n";
+  $rdf_text .= "\t" . '<rdf:Description';
+  $rdf_text .= ' rdf:about="' . $url . '"';
+  $rdf_text .= ' dc:identifier="' . $url . '"';
+  $rdf_text .= ' dc:title="' . strtr(check_plain($node->title), array('--' => '&mdash;')) . '"';
+  $rdf_text .= ' trackback:ping="' . $tb_url . '" />' . "\n";
+  $rdf_text .= '</rdf:RDF>';
+  $rdf_text .= "\n-->\n";
+
+  // Add the RDF meta-data to the node.
+  $node->content['trackback'] = array(
+    '#markup' => $rdf_text,
+  );
+}
+
+/**
+ * Check whether a URL has the potential for trackback auto-discovery.
+ *
+ * Since autodetection might encounter a link to a media file, we first want to
+ * make a simple 'HEAD' HTTP request instead of an actual GET.  This results in
+ * having to make an extra drupal_http_request() later for an actual GET, but
+ * it is worth it considering the strong likelihood that auto-detection may
+ * encounter a URL that links to a media file.
+ *
+ * @param String $url
+ *   The URL to test.
+ *
+ * @return Boolean|NULL
+ * - TRUE if the URL was reached and might support Trackback auto-discovery.
+ * - FALSE if the URL was reached and is unlikely to support Trackback auto-
+ *   discovery.
+ * - NULL if the URL could not be reached (for example, due to a 404 error).
+ */
+function _linkback_trackback_check_url_provides_parsable_content($url) {
+  $options = array(
+    'method' => 'HEAD',
+    'headers' => array(
+      'User-Agent' => LINKBACK_TRACKBACK_UA,
+    ),
+  );
+  $result = drupal_http_request($url, $options);
+  if (isset($result->error) || $result->code != 200) {
+    return NULL;
+  }
+
+  $mime_type = (isset($result->headers['content-type'])) ? $result->headers['content-type'] : NULL;
+  $is_valid = substr_count($mime_type, 'text/html')
+           || substr_count($mime_type, 'application/xhtml+xml')
+           || substr_count($mime_type, 'application/xml')
+           || substr_count($mime_type, 'text/xml');
+
+  return $is_valid;
+}
+
+/**
+ * Extract the Trackback endpoints from a section of text (such as the contents
+ * of a web page).
+ *
+ * @param String $html
+ *   The HTML to search
+ *
+ * @return Array
+ *   Array of discovered trackback endpoints (where the key is the entity's
+ *   identifier - i.e. the remote page's URL - and the value is the endpoint).
+ *   If no Trackback endpoints are discovered, an empty array will be returned.
+ */
+function _linkback_trackback_extract_endpoint_from_html($html) {
+  $matches = array();
+
+  // Sample RDF:
+  // <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+  //          xmlns:dc="http://purl.org/dc/elements/1.1/"
+  //          xmlns:trackback="http://madskills.com/public/xml/rss/module/trackback/">
+  //    <rdf:Description
+  //      rdf:about="http://www.foo.com/archive.html#foo"
+  //      dc:identifier="http://www.foo.com/archive.html#foo"
+  //      dc:title="Foo Bar"
+  //      trackback:ping="http://www.foo.com/tb.cgi/5" />
+  //  </rdf:RDF>
+
+  // We need to match: RDF/Description[@ping and @identifier]
+
+  // If RDF tags are wrapped in comment tags, remove the comment tags so the
+  // RDF tags can be parsed by SimpleXML
+  $html = _linkback_trackback_strip_comment_tags($html);
+
+  $result = simplexml_load_string($html);
+
+  // Discover three unused namespace prefixes, to avoid namespace prefix
+  // collision.
+  // (There's an issue in Simplexml which prevents namespace-prefixed access
+  // to nodes which redefine a pre-existing namespace prefix to a new
+  // namespace - the node can be accessed by the correct namespace with a non-
+  // conflicting prefix, but cannot be accessed through registering the pre-
+  // existing namespace prefix to the correct namespace. WTF is an appropriate
+  // response to this explanation!)
+  list($p1, $p2, $p3) = _linkback_trackback_generate_unique_prefixes($result->getNamespaces(TRUE));
+
+  $result->registerXPathNamespace($p1, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
+  $result->registerXPathNamespace($p2, 'http://purl.org/dc/elements/1.1/');
+  $result->registerXPathNamespace($p3, 'http://madskills.com/public/xml/rss/module/trackback/');
+
+  if ($rdf_tags = $result->xpath("//{$p1}:RDF/{$p1}:Description[@{$p2}:identifier and @{$p3}:ping]")) {
+    foreach($rdf_tags as $element) {
+      $identifier = (string) $element->attributes('http://purl.org/dc/elements/1.1/')->identifier;
+      $ping       = (string) $element->attributes('http://madskills.com/public/xml/rss/module/trackback/')->ping;
+      $matches[$identifier] = $ping;
+    }
+  }
+
+  return $matches;
+}
+
+/**
+ * Where RDF tags are wrapped by comment tags, remove the comment tags.
+ */
+function _linkback_trackback_strip_comment_tags($html) {
+  // If RDF tags are found within a comment section, strip out the comment tags
+  // so the RDF can be parsed via SimpleXml.
+
+  // Simply run every comment tag through a helper function.
+  // The /e modifier invokes replacements via a helper function.
+  // The /m modifier indicates multi-line matching, and /s allows the dot [.]
+  //   character to include \n (the new-line character).
+  // The ? character (in .*?) indicated non-greedy matching.
+  $html = preg_replace_callback('/<!--(.*?)-->/ms', "_linkback_trackback_strip_comment_tags_helper", $html);
+  return $html;
+}
+
+/**
+ * Helper function to check for RDF tags within a HTML comment, and strip the
+ * comment tag if they're present.  Used with preg_replace_callback().
+ */
+function _linkback_trackback_strip_comment_tags_helper($matches) {
+  $comment_text = $matches[1];
+  if (preg_match('#<([^:]*:)?RDF\s#ms', $comment_text)) {
+    return $comment_text;
+  }
+  return '<!--' . $comment_text . '-->';
+}
+
+/**
+ * Generate 3 unique namespace prefixes, to avoid collision with existing
+ * namespace prefixes.
+ *
+ * @param Array $namespaces
+ *  Array of current namespaces in use (see SimpleXMLElement::getNamespaces).
+ *
+ * @return Array
+ *   An array of 3 unique 5-character namespace prefixes.
+ */
+function _linkback_trackback_generate_unique_prefixes($namespaces) {
+  // Each new prefix will be a random 5-character string using lower-case
+  // alphabetic characters.
+  $character_set = 'abcdefghijklmnopqrstuvwxyz';
+
+  $new_prefixes = array();
+  $prefixes = array_keys($namespaces);
+  while (count($new_prefixes) < 3) {
+    $prefix = $character_set[rand(0,25)]
+            . $character_set[rand(0,25)]
+            . $character_set[rand(0,25)]
+            . $character_set[rand(0,25)]
+            . $character_set[rand(0,25)];
+    if (!(in_array($prefix, $prefixes) || in_array($prefix, $new_prefixes))) {
+      $new_prefixes[] = $prefix;
+    }
+  }
+  return $new_prefixes;
 }
