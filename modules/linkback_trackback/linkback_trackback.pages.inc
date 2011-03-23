@@ -84,6 +84,8 @@ function _linkback_trackback_success_text() {
   $response[] = '<response>';
   $response[] = '<error>0</error>';
   $response[] = '</response>';
+  // Add a trailing new-line.
+  $response[] = '';
 
   return implode("\n", $response);
 }
@@ -99,6 +101,9 @@ function _linkback_trackback_failure_text($msg) {
   $response[] = '<error>1</error>';
   $response[] = '<message>' . htmlentities($msg) . '</message>';
   $response[] = '</response>';
+  // Add a trailing new-line.
+  $response[] = '';
+
 
   return implode("\n", $response);
 }
