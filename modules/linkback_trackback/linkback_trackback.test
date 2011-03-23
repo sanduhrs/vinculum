@@ -168,3 +168,68 @@ class LinkbackTrackbackReceiveTestCase extends DrupalWebTestCase {
 
 }
 
+
+
+/**
+ * Test the Send mechanism for trackbacks.
+ */
+class LinkbackTrackbackSendTestCase extends DrupalWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Trackback: send trackbacks',
+      'description' => 'Test that trackbacks are sent when a node is saved.',
+      'group' => 'Linkback',
+    );
+  }
+
+  function setUp() {
+    parent::setUp('linkback', 'linkback_trackback');
+
+    // Create a content-type; enable it to send linkbacks.
+    $type_machine_name = 'dummy_contenttype1';
+    $type = array(
+      'type' => $type_machine_name,
+      'name' => st('Linkback dummy content-type 1'),
+      'base' => 'node_content',
+      'description' => st("A dummy content-type, used for testing the Linkback Trackback module. This content-type should not be visible."),
+      'custom' => 1,
+      'modified' => 1,
+      'locked' => 0,
+    );
+    $type = node_type_set_defaults($type);
+    node_type_save($type);
+    node_add_body_field($type);
+
+    // Enable linkback-receive for this content-type.
+    variable_set("linkback_send_{$type_machine_name}", TRUE);
+  }
+
+
+  /**
+   * Test the auto-detection of Trackback endpoints.
+   */
+  function testTrackbackEndpointAutodetection() {
+    // The helper module provides a set of local end-points which provide a
+    // variety of Trackback meta-data formats.
+    module_enable(array('linkback_trackback_dummy_endpoints'));
+
+    // Array of local path => discoverable endpoint.
+    $target_urls = array(
+      'trackback_dummy_endpoint/1' => NULL,
+      'trackback_dummy_endpoint/2' => FALSE,
+      'trackback_dummy_endpoint/3' => FALSE,
+      'trackback_dummy_endpoint/4' => 'http://www.foo.com/tb.cgi/5',
+      'trackback_dummy_endpoint/5' => 'http://example.com/tb/5',
+      'trackback_dummy_endpoint/6' => 'http://example.com/tb/6',
+      'trackback_dummy_endpoint/7' => 'http://example.com/tb/7b',
+      'trackback_dummy_endpoint/8' => FALSE,
+    );
+
+    foreach ($target_urls as $local_url => $expected_endpoint) {
+      $url = url($local_url, array('absolute' => TRUE));
+      $result = linkback_trackback_autodetect_trackback_support($url);
+      $this->assertEqual($result, $expected_endpoint, t('Endpoint correctly discovered for @url', array('@url' => $url)));
+    }
+  }
+}
