@@ -108,21 +108,29 @@ function linkback_pingback_linkback_send($target, $source, $node) {
  * @ingroup linkback
  */
 function linkback_pingback_target_supports_pingback($url) {
-  // Check for an X-Pingback header.
-  $result = drupal_http_request($target, array(), 'HEAD');
-  if (!$result->error && is_array($result->headers) && isset($result->headers['X-Pingback'])) {
-    return check_url($result->headers['X-Pingback']);
+  // 1.  Check for an X-Pingback header.
+  $result = drupal_http_request($url, array(), 'HEAD');
+  if (!isset($result->error) && is_array($result->headers) && isset($result->headers['X-Pingback'])) {
+    $endpoint = check_url($result->headers['X-Pingback']);
+    watchdog('Pingback', 'Pingback auto-discovery is supported on %url, with the Pingback endpoint %endpoint (using X-PINGBACK HTTP header).', array('@url' => $url, '%endpoint' => $endpoint), WATCHDOG_DEBUG);
+    return $endpoint;
   }
-  // Do a full request for the page, check for a <link> tag.
-  elseif (!$result->error) {
-    $result = drupal_http_request($target);
-    if (!$result->error) {
+
+  // 2.  Do a full request for the page, check for a <link> tag.
+  elseif (!isset($result->error)) {
+    $result = drupal_http_request($url);
+    if (!isset($result->error)) {
       // This regexp is the one provided in the spec.
       if (preg_match('#<link rel="pingback" href="([^"]+)" ?/?>#', $result->data, $matches)) {
-        return check_url($matches[1]);
+        $endpoint = check_url($matches[1]);
+        watchdog('Pingback', 'Pingback auto-discovery is supported on %url, with the Pingback endpoint %endpoint (using &lt;link rel="pingback"&gt; tag).', array('@url' => $url, '%endpoint' => $endpoint), WATCHDOG_DEBUG);
+        return $endpoint;
       }
     }
   }
+
+  // No X-Pingback header, no <link rel="pingback">.
+  watchdog('Pingback', 'Pingback auto-discovery is not supported on %url.', array('%url' => $url), WATCHDOG_DEBUG);
   return FALSE;
 }
 

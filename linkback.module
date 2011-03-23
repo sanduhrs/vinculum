@@ -515,6 +515,14 @@ function linkback_send_single_linkback($source, $target, $node) {
 
     // If the handler reports success, log this as a successful request.
     if ($success) {
+      $params = array(
+        '%target'     => $target,
+        '@node_url'   => url("node/{$node->nid}"),
+        '%node_title' => $node->title,
+        '%handler'    => $handler->module,
+      );
+      watchdog('Linkback', 'Linkback sent to %target for node <a href="@node_url">%node_title</a> using %handler.', $params, WATCHDOG_DEBUG);
+
       db_merge('node_linkback_sent')
         ->key(array(
           'nid' => $node->nid,
@@ -528,6 +536,13 @@ function linkback_send_single_linkback($source, $target, $node) {
       return TRUE;
     }
   }
+
+  $params = array(
+    '%target'     => $target,
+    '@node_url'   => url("node/{$node->nid}"),
+    '%node_title' => $node->title,
+  );
+  watchdog('Linkback', 'Linkback could not be sent to %target for node <a href="@node_url">%node_title</a> - no linkback support found.', $params, WATCHDOG_DEBUG);
   return FALSE;
 }
 

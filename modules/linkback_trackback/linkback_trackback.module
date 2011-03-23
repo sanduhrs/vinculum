@@ -165,11 +165,11 @@ function linkback_trackback_autodetect_trackback_support($url) {
   // Pages might list multiple endpoints: use the endpoint whose identifier
   // matches the URL provided.
   if (!isset($endpoints[$url])) {
-    drupal_set_message('not found');
+    watchdog('Trackback', 'Trackback auto-discovery is not supported on %url.', array('%url' => $url), WATCHDOG_DEBUG);
     return FALSE;
   }
   else {
-    drupal_set_message('found ' . $endpoints[$url]);
+    watchdog('Trackback', 'Trackback auto-discovery is supported on %url, with the Trackback endpoint %endpoint.', array('@url' => $url, '%endpoint' => $endpoints[$url]), WATCHDOG_DEBUG);
     return $endpoints[$url];
   }
 }
@@ -336,7 +336,10 @@ function _linkback_trackback_extract_endpoint_from_html($html) {
   // RDF tags can be parsed by SimpleXML
   $html = _linkback_trackback_strip_comment_tags($html);
 
-  $result = simplexml_load_string($html);
+  if (!$result = @simplexml_load_string($html)) {
+    // If the html can't be loaded by simplexml, abort early.
+    return array();
+  }
 
   // Discover three unused namespace prefixes, to avoid namespace prefix
   // collision.
