@@ -37,6 +37,8 @@ function linkback_trackback_linkback_send($target, $source, $node) {
 
     // Attempt to send the trackback.
     $result = linkback_trackback_send_trackback($trackback_endpoint_url, $params);
+
+    return $result;
   }
 }
 
@@ -198,6 +200,7 @@ function linkback_trackback_send_trackback($endpoint_url, $params) {
   $params += array(
     'blog_name' => variable_get('site_name', 'Drupal'),
   );
+  $params = http_build_query($params);
 
   $options = array(
     // The Trackback protocol supports requires POST.
@@ -209,15 +212,83 @@ function linkback_trackback_send_trackback($endpoint_url, $params) {
     // Add the data to send in the Trackback.
     'data' => $params,
   );
-  $result = drupal_http_request($url, $options);
+  $result = drupal_http_request($endpoint_url, $options);
 
-  // @TODO: Detect and log errors.
+  if ($result->data) {
+    list($error, $message) = _linkback_trackback_parse_response($result->data);
 
+    // Log the error.
+    if (is_null($error)) {
+      // The response could not be parsed.
+      $params = array(
+        '%url' => $endpoint_url,
+        '!verbose_output' => filter_xss(str_replace("\n", "<br />\n", htmlentities($result->data))),
+      );
+      watchdog('Trackback', 'Trackback response for endpoint %url could not be parsed as XML.<br />!verbose_output', $params, WATCHDOG_DEBUG);
+    }
+    elseif ($error && $message) {
+      $params = array(
+        '%url' => $endpoint_url,
+        '!verbose_output' => filter_xss(str_replace("\n", "<br />\n", htmlentities($message))),
+      );
+      watchdog('Trackback', 'Trackback failed for endpoint %url with the message:<br />!verbose_output', $params, WATCHDOG_DEBUG);
+    }
+    elseif ($error) {
+      $params = array(
+        '%url' => $endpoint_url,
+      );
+      watchdog('Trackback', 'Trackback failed for endpoint %url. No error message was provided.', $params, WATCHDOG_DEBUG);
+    }
+
+    return ($error === FALSE);
+  }
 }
 
 /**********************************************************
  * Private helper functions.
  *********************************************************/
+
+/**
+ * Parse the response from a trackback endpoint, and report if the response is
+ * an error (and any message, if provided).
+ *
+ * @param String $html
+ *  The response provided by the Trackback endpoint.
+ *
+ * @return Array(
+ *   0 => Error state (boolean|NULL),
+ *   1 => Message (if set),
+ * );
+ */
+function _linkback_trackback_parse_response($html) {
+  // If the html can't be parsed as XML, return error response NULL.
+  if (!$xml = @simplexml_load_string($html)) {
+    return array(NULL, '');
+  }
+
+  // Check for the <error> response.
+  $error_response = $xml->xpath('//response/error/text()');
+  if (empty($error_response)) {
+    return array(NULL, '');
+  }
+  elseif ($error_response[0] == 1) {
+    // Check for an error message.
+    $error_message = $xml->xpath('//response/message/text()');
+    if (count($error_message)) {
+      return array(TRUE, $error_message[0]);
+    }
+    return array(TRUE, '');
+  }
+  elseif ($error_response[0] == 0) {
+    // Error response 0 means OK
+    return array(FALSE, '');
+  }
+  else {
+    // There's an <error> response, but it doesn't conform to the standard
+    // of being 0 or 1.
+    return array(NULL, '');
+  }
+}
 
 /**
  * Get the Trackback API endpoint URL for a local node.
