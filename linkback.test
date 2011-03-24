@@ -281,8 +281,7 @@ class LinkbackTestSuiteTestCase extends DrupalWebTestCase {
    * Test the general setup.
    */
   function testSetup() {
-    // Create a node linking to linkback_dummy_endpoints/no_linkback_support.
-    // The linkback should report failure.
+    // Check that the helper functions can properly extract the URLs from the node.
 
     $url = url('linkback_dummy_endpoints/no_linkback_support', array('absolute' => TRUE));
     // $text = "
@@ -314,16 +313,6 @@ class LinkbackTestSuiteTestCase extends DrupalWebTestCase {
     $links = linkback_get_external_links($node);
     $expected = array($url);
     $this->assertEqual($links, $expected, t('Links can be extracted from the node.'));
-
-    // This should change the {node_linkback_sent} table: a new entry should be
-    // added with the nid/URL, but handler should be NULL.
-    $result = db_select('node_linkback_sent', 'nls')
-      ->fields('nls')
-      ->condition('nls.nid', $node->nid)
-      ->condition('nls.url', $url)
-      ->execute()
-      ->fetchObject();
-    $this->assertNull($result->handler, t("When linkbacks aren't supported, a NULL entry is recorded in {node_linkback_sent} for the url %url.", array('%url' => $url)));
   }
 
 
