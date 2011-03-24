@@ -237,3 +237,249 @@ class LinkbackSendTestCase extends DrupalWebTestCase {
   }
 
 }
+
+
+/**
+ * Test that node-saving triggers the linkback protocol.
+ */
+class LinkbackTestSuiteTestCase extends DrupalWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'API: Test whole suite',
+      'description' => 'Test the full pingback/trackback process with dummy test endpoints.',
+      'group' => 'Linkback',
+    );
+  }
+
+  function setUp() {
+    parent::setUp('linkback', 'linkback_pingback', 'linkback_trackback', 'linkback_dummy_endpoints');
+
+    // Create a dummy content-type
+    $type_machine_name = 'linkback_dummy_contenttype';
+    $type = array(
+      'type' => $type_machine_name,
+      'name' => st('Linkback dummy content-type'),
+      'base' => 'node_content',
+      'description' => st("A dummy content-type, used for testing the Linkback module. This content-type should not be visible."),
+      'custom' => 1,
+      'modified' => 1,
+      'locked' => 0,
+    );
+    $type = node_type_set_defaults($type);
+    node_type_save($type);
+    node_add_body_field($type);
+
+    // Allow linkbacks to be sent for this content-type.
+    variable_set("linkback_send_{$type_machine_name}", TRUE);
+  }
+
+
+
+
+  /**
+   * Test the general setup.
+   */
+  function testSetup() {
+    // Create a node linking to linkback_dummy_endpoints/no_linkback_support.
+    // The linkback should report failure.
+
+    $url = url('linkback_dummy_endpoints/no_linkback_support', array('absolute' => TRUE));
+    // $text = "
+    //   This is a section of test text which <a href='{$url}'>links to a test
+    //   endpoint</a>.";
+    $text = "This is a section of test text which references {$url}.";
+
+    // Check that the correct URL is extracted from the text.
+    $links = _linkback_extract_urls($text);
+    $expected = array($url);
+    $this->assertEqual($links, $expected, t('Links can be extracted from the text.'));
+
+    $settings = array(
+      'type' => 'linkback_dummy_contenttype',
+      'title' => 'Example node used for testing the linkback module.',
+      'body' => array(
+        LANGUAGE_NONE => array(
+          0 => array(
+            'value' => $text,
+            'format' => filter_default_format(),
+          ),
+        ),
+      ),
+    );
+    $node = $this->drupalCreateNode($settings);
+
+    // Check that the correct URL is extracted from the node.
+    $node = node_load($node->nid);
+    $links = linkback_get_external_links($node);
+    $expected = array($url);
+    $this->assertEqual($links, $expected, t('Links can be extracted from the node.'));
+
+    // This should change the {node_linkback_sent} table: a new entry should be
+    // added with the nid/URL, but handler should be NULL.
+    $result = db_select('node_linkback_sent', 'nls')
+      ->fields('nls')
+      ->condition('nls.nid', $node->nid)
+      ->condition('nls.url', $url)
+      ->execute()
+      ->fetchObject();
+    $this->assertNull($result->handler, t("When linkbacks aren't supported, a NULL entry is recorded in {node_linkback_sent} for the url %url.", array('%url' => $url)));
+  }
+
+
+  /**
+   * Support for an endpoint with no linkback support.
+   */
+  function testNoLinkbackSupport() {
+    // Create a node linking to linkback_dummy_endpoints/no_linkback_support.
+    // The linkback should report failure.
+
+    $url = url('linkback_dummy_endpoints/no_linkback_support', array('absolute' => TRUE));
+    $text = "
+      This is a section of test text which <a href='{$url}'>links to a test
+      endpoint</a>.";
+
+    $settings = array(
+      'type' => 'linkback_dummy_contenttype',
+      'title' => 'Example node used for testing the linkback module.',
+      'body' => array(
+        LANGUAGE_NONE => array(
+          0 => array(
+            'value' => $text,
+            'format' => filter_default_format(),
+          ),
+        ),
+      ),
+    );
+    $node = $this->drupalCreateNode($settings);
+
+    // This should change the {node_linkback_sent} table: a new entry should be
+    // added with the nid/URL, but handler should be NULL.
+    $result = db_select('node_linkback_sent', 'nls')
+      ->fields('nls', array('handler'))
+      ->condition('nls.nid', $node->nid)
+      ->condition('nls.url', $url)
+      ->execute()
+      ->fetchObject();
+    $this->assertNull($result->handler, t("When linkbacks aren't supported, a NULL entry is recorded in {node_linkback_sent}."));
+  }
+
+  // 
+  // /**
+  //  * Support for Pingback only.
+  //  */
+  // function testPingbackOnlySupport() {
+  //   // Create a node linking to linkback_dummy_endpoints/no_linkback_support.
+  //   // The linkback should report failure.
+  // 
+  //   $url = url('linkback_dummy_endpoints/pingback_only', array('absolute' => TRUE));
+  //   $text = "
+  //     This is a section of test text which <a href='{$url}'>links to a test
+  //     endpoint</a>.";
+  // 
+  //   $settings = array(
+  //     'type' => 'linkback_dummy_contenttype',
+  //     'title' => 'Example node used for testing the linkback module.',
+  //     'body' => array(
+  //       LANGUAGE_NONE => array(
+  //         0 => array(
+  //           'value' => $text,
+  //           'format' => filter_default_format(),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  //   $node = $this->drupalCreateNode($settings);
+  // 
+  //   // This should change the {node_linkback_sent} table: a new entry should be
+  //   // added with the nid/URL, with the handler set to 'linkback_pingback'.
+  //   $result = db_select('node_linkback_sent', 'nls')
+  //     ->fields('nls', array('handler'))
+  //     ->condition('nls.nid', $node->nid)
+  //     ->condition('nls.url', $url)
+  //     ->execute()
+  //     ->fetchAll();
+  //   $this->assertEqual($result->handler, 'linkback_pingback', t("When an endpoint supports only pingback, an entry is recorded in {node_linkback_sent} with the handler 'linkback_pingback'."));
+  // }
+
+
+  /**
+   * Support for Trackback only.
+   */
+  function testTrackbackOnlySupport() {
+    // The target for this test is linkback_dummy_endpoints/trackback_only
+    $url = url('linkback_dummy_endpoints/trackback_only', array('absolute' => TRUE));
+
+    // The endpoint at $url should support auto-discovery of trackbacks.
+    $trackback_endpoint_url = linkback_trackback_autodetect_trackback_support($url);
+    $expected = url(LINKBACK_TEST_TRACKBACK_ENDPOINT, array('absolute' => TRUE));
+    $this->assertEqual($trackback_endpoint_url, $expected, t('Correct endpoint auto-discovered in the test URL at %url', array('%url', $url)));
+
+    // Create a node linking to linkback_dummy_endpoints/no_linkback_support.
+    // The linkback should report failure.
+    $text = "
+      This is a section of test text which <a href='{$url}'>links to a test
+      endpoint</a>.";
+
+    $settings = array(
+      'type' => 'linkback_dummy_contenttype',
+      'title' => 'Example node used for testing the linkback module.',
+      'body' => array(
+        LANGUAGE_NONE => array(
+          0 => array(
+            'value' => $text,
+            'format' => filter_default_format(),
+          ),
+        ),
+      ),
+    );
+    $node = $this->drupalCreateNode($settings);
+
+    // This should change the {node_linkback_sent} table: a new entry should be
+    // added with the nid/URL, with the handler set to 'linkback_pingback'.
+    $result = db_select('node_linkback_sent', 'nls')
+      ->fields('nls', array('handler'))
+      ->condition('nls.nid', $node->nid)
+      ->condition('nls.url', $url)
+      ->execute()
+      ->fetchObject();
+    $this->assertEqual($result->handler, 'linkback_trackback', t("When an endpoint supports only trackback, an entry is recorded in {node_linkback_sent} with the handler 'linkback_trackback'."));
+
+    // The endpoint should add an entry into the variables table for
+    // linkback_testing_last_trackback.
+    $expected = array(
+      'url'       => url("node/{$node->nid}", array('absolute' => TRUE)),
+      'title'     => $node->title,
+      'blog_name' => variable_get('site_name', 'Drupal'),
+      'excerpt'   => NULL,
+    );
+    $this->refreshVariables();
+    $result = variable_get('linkback_testing_last_trackback', FALSE);
+
+
+    $this->verbose('<h1>Expected results</h1>'
+                 . '<code>' . str_replace("\n", "<br />\n", var_export($expected, TRUE)) . '</code>'
+                 . '<hr />'
+                 . '<h1>Actual results</h1>'
+                 . '<code>' . str_replace("\n", "<br />\n", var_export($result, TRUE)) . '</code>');
+    $this->assertEqual($result, $expected, t('The correct data was sent to the Trackback endpoint.'));
+
+
+
+    // Debug: Dump the watchdog table.
+    // $x = db_select('watchdog', 'w')
+    //   ->fields('w')
+    //   ->execute()
+    //   ->fetchAll();
+    // $out = '';
+    // foreach($x as $row) {
+    //   $out .= '<strong>';
+    //   $out .= t($row->message, unserialize($row->variables));
+    //   $out .= '</strong><br />';
+    //   $out .= str_replace("\n", "<br />\n", var_export($row, TRUE)) . '<hr />';
+    // }
+    // $this->verbose($out);
+
+  }
+
+}

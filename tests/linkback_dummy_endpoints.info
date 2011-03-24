@@ -1,0 +1,5 @@
+name = Linkback Dummy Endpoint
+description = Provides a set of test URLs and endpoints which receive and handle pingbacks and trackbacks.
+package = Testing
+core = 7.x
+hidden = TRUE
