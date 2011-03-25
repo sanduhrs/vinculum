@@ -445,6 +445,10 @@ function linkback_node_allows_linkback($node, $op) {
  */
 function linkback_get_external_links($node) {
   $links = module_invoke_all('linkback_get_external_links', $node);
+
+  // Remove duplicate links.
+  $links = array_unique($links);
+
   return $links;
 }
 
@@ -864,8 +868,26 @@ function _linkback_extract_text($node) {
  * Extract all the external URLs from a single string.
  */
 function _linkback_extract_urls($text) {
+  // Check for the href value of explicit <a> tags, and remove the text found
+  // within the <a> tags (because the "Convert URLs into links" filter may
+  // shorten <a> text, making uniqueness difficult).
+  $pattern = "#<a [^>]*?href=([\"'])([^\\1]+?)\\1[^>]*?>.*?</a>#ms";
+  preg_match_all($pattern, $text, $matches);
+
+  // Matches:
+  // 0 = The full <a>...</a> tag.
+  // 1 = The initial quote mark (used purely for back-referencing)
+  // 2 = The value of the href attribute.
+  $links = $matches[2];
+
+  // Remove the <a>...</a> tags which have just been captured.
+  $text = preg_replace($pattern, '', $text);
+
   // Regexp is stolen from trackback.module ;)
-  preg_match_all("/(http|https):\/\/[a-zA-Z0-9@:%_~#?&=.,\/;-]*[a-zA-Z0-9@:%_~#&=\/;-]/", $text, $urls);
-  // TODO: check that the URLs are external, and not local FQDN.
-  return array_unique($urls[0]);
+  preg_match_all("/(http|https):\/\/[a-zA-Z0-9@:%_~#?&=.,\/;-]*[a-zA-Z0-9@:%_~#&=\/;-]/", $text, $matches);
+
+  // TODO: check that the URLs are external, and not local FQDN?
+
+  $links = array_merge($links, $matches[0]);
+  return array_unique($links);
 }
