@@ -136,6 +136,12 @@ function linkback_trackback_autodetect_trackback_support($url) {
   // (by checking its mime-type). Images/media are frequently linked by nodes,
   // but these URLs would not support Trackback.
   if (!$discoverable = _linkback_trackback_check_url_provides_parsable_content($url)) {
+    if (is_null($discoverable)) {
+      watchdog('Trackback', 'Trackback auto-discovery not attempted: an error occurred when making a HEAD request for %url.', array('%url' => $url), WATCHDOG_DEBUG);
+    }
+    else {
+      watchdog('Trackback', 'Trackback auto-discovery not attempted: %url does not appear to be a web page.', array('%url' => $url), WATCHDOG_DEBUG);
+    }
     return $discoverable;
   }
 
@@ -158,6 +164,7 @@ function linkback_trackback_autodetect_trackback_support($url) {
 
   // If the request failed, abort early.
   if (isset($result->error) || $result->code != 200 || empty($result->data)) {
+    watchdog('Trackback', 'Trackback auto-discovery not attempted: an error occurred when making a GET request for %url.', array('%url' => $url), WATCHDOG_DEBUG);
     return NULL;
   }
 
