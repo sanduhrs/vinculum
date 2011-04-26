@@ -1,4 +1,4 @@
-name = Linkback Trackback Dummy Endpoints
+name = Linkback Trackback Autodiscovery Dummy Endpoints
 description = Provides a set of dummy endpoints to test auto-detection of trackback meta-data. package = Testing
 core = 7.x
 hidden = TRUE

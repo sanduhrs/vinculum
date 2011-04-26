@@ -219,38 +219,4 @@ class LinkbackTrackbackSendTestCase extends DrupalWebTestCase {
     variable_set("linkback_send_{$type_machine_name}", TRUE);
   }
 
-
-  /**
-   * Test the auto-detection of Trackback endpoints.
-   */
-  function testTrackbackEndpointAutodetection() {
-    // The helper module provides a set of local end-points which provide a
-    // variety of Trackback meta-data formats.
-    module_enable(array('linkback_trackback_dummy_endpoints'));
-
-    // The linkback_trackback_dummy_endpoint module provides 8 pages which
-    // contain a variety of approaches to embedding Trackback RDF meta-data in
-    // their pages (and some pages contain no Trackback auto-discovery meta-
-    // data).
-
-    // Array of local path => discoverable endpoint.
-    $target_urls = array(
-      // 1 is a 404 page, so should return NULL to show the URL is unreachable.
-      'trackback_dummy_endpoint/1' => NULL,
-      'trackback_dummy_endpoint/2' => FALSE,
-      'trackback_dummy_endpoint/3' => FALSE,
-      'trackback_dummy_endpoint/4' => 'http://www.foo.com/tb.cgi/5',
-      'trackback_dummy_endpoint/5' => 'http://example.com/tb/5',
-      'trackback_dummy_endpoint/6' => 'http://example.com/tb/6',
-      'trackback_dummy_endpoint/7' => 'http://example.com/tb/7b',
-      'trackback_dummy_endpoint/8' => FALSE,
-    );
-
-    foreach ($target_urls as $local_url => $expected_endpoint) {
-      $url = url($local_url, array('absolute' => TRUE));
-      $result = linkback_trackback_autodetect_trackback_support($url);
-      // Use assertIdentical to test for FALSE vs NULL.
-      $this->assertIdentical($result, $expected_endpoint, t('Endpoint correctly discovered for @url', array('@url' => $url)));
-    }
-  }
 }
