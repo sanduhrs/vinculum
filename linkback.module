@@ -474,7 +474,10 @@ function linkback_send_linkbacks($links, $node) {
     );
   }
 
-  // Invoke hook_linkback_link_send_alter(). The node property is unalterable.
+  // Invoke hook_linkback_link_send_alter().
+  // Allow other modules to change the source/target URLs before sending
+  // linkbacks.
+  // The node property is unalterable.
   drupal_alter('linkback_link_send', $records, $node);
 
   foreach ($records as $record) {
@@ -515,6 +518,10 @@ function linkback_send_single_linkback($source, $target, $node) {
   foreach ($handlers as $handler) {
     // Invoke hook_linkback_send().
     $callback = $handler->module . '_linkback_send';
+    // Ensure the function exists before attempting to call it.
+    if (!function_exists($callback)) {
+      continue;
+    }
     $success = $callback($target, $source, $node);
 
     // If the handler reports success, log this as a successful request.

@@ -21,6 +21,7 @@
  *
  * This is a hook used by linkback handler modules. It allows a module to
  * define a handler which implements a linkback protocol.
+ * Modules implementing this should also implement hook_linkback_send().
  *
  * @return
  *   An array containing the key 'protocol' which provides the human-readable
@@ -37,6 +38,7 @@ function hook_linkback_handler() {
 
 /**
  * Attempt to send a linkback to a single URL for a single node.
+ * Modules implementing this must also implement hook_linkback_handler().
  *
  * @param String $target
  *    The URL of the external site. You can assume that the link will always be

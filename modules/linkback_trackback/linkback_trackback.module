@@ -7,15 +7,6 @@
 // User-Agent to send when connecting to external sites.
 define ('LINKBACK_TRACKBACK_UA', 'Drupal Trackback (+http://drupal.org/project/linkback)');
 
-/**
- * Implements hook_linkback_handler().
- */
-function linkback_trackback_linkback_handler() {
-  return array(
-    'protocol' => t('Trackback'),
-  );
-}
-
 
 /**
  * Implements hook_menu().

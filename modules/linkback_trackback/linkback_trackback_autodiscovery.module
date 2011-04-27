@@ -5,6 +5,16 @@
  */
 
 /**
+ * Implements hook_linkback_handler().
+ */
+function linkback_trackback_autodiscovery_linkback_handler() {
+  return array(
+    'protocol' => t('Trackback auto-discovery'),
+  );
+}
+
+
+/**
  * Implements hook_linkback_send().
  *
  * Attempt to send a trackback to an external site.
@@ -19,6 +29,7 @@ function linkback_trackback_autodiscovery_linkback_send($target, $source, $node)
       // @TODO: extract an excerpt.
       // 'excerpt' => 
     );
+
     // Allow other modules to change the data sent to the remote site, via
     // hook_trackback_send_params_alter().
     drupal_alter('trackback_send_params', $params);

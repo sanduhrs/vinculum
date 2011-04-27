@@ -253,7 +253,7 @@ class LinkbackTestSuiteTestCase extends DrupalWebTestCase {
   }
 
   function setUp() {
-    parent::setUp('linkback', 'linkback_pingback', 'linkback_trackback', 'linkback_dummy_endpoints');
+    parent::setUp('linkback', 'linkback_pingback', 'linkback_trackback', 'linkback_trackback_autodiscovery', 'linkback_dummy_endpoints');
 
     // Create a dummy content-type
     $type_machine_name = 'linkback_dummy_contenttype';
@@ -400,7 +400,7 @@ class LinkbackTestSuiteTestCase extends DrupalWebTestCase {
     $url = url('linkback_dummy_endpoints/trackback_only', array('absolute' => TRUE));
 
     // The endpoint at $url should support auto-discovery of trackbacks.
-    $trackback_endpoint_url = linkback_trackback_autodetect_trackback_support($url);
+    $trackback_endpoint_url = linkback_trackback_autodiscovery_autodetect_trackback_support($url);
     $expected = url(LINKBACK_TEST_TRACKBACK_ENDPOINT, array('absolute' => TRUE));
     $this->assertEqual($trackback_endpoint_url, $expected, t('Correct endpoint auto-discovered in the test URL at %url', array('%url', $url)));
 
@@ -432,7 +432,7 @@ class LinkbackTestSuiteTestCase extends DrupalWebTestCase {
       ->condition('nls.url', $url)
       ->execute()
       ->fetchObject();
-    $this->assertEqual($result->handler, 'linkback_trackback', t("When an endpoint supports only trackback, an entry is recorded in {node_linkback_sent} with the handler 'linkback_trackback'."));
+    $this->assertEqual($result->handler, 'linkback_trackback_autodiscovery', t("When an endpoint supports only trackback, an entry is recorded in {node_linkback_sent} with the handler 'linkback_trackback_autodiscovery'."));
 
     // The endpoint should add an entry into the variables table for
     // linkback_testing_last_trackback.
