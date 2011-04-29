@@ -53,18 +53,10 @@ function linkback_trackback_autodiscovery_linkback_send($target, $source, $node)
  * NULL: The URL could not be successfully requested.
  */
 function linkback_trackback_autodiscovery_autodetect_trackback_support($url) {
-
-  // Do an initial check that the URL might support trackback auto-discovery
-  // (by checking its mime-type). Images/media are frequently linked by nodes,
-  // but these URLs would not support Trackback.
-  if (!$discoverable = _linkback_trackback_autodiscovery_check_url_provides_parsable_content($url)) {
-    if (is_null($discoverable)) {
-      watchdog('Trackback', 'Trackback auto-discovery not attempted: an error occurred when making a HEAD request for %url.', array('%url' => $url), WATCHDOG_DEBUG);
-    }
-    else {
-      watchdog('Trackback', 'Trackback auto-discovery not attempted: %url does not appear to be a web page.', array('%url' => $url), WATCHDOG_DEBUG);
-    }
-    return $discoverable;
+  // Efficiency-check: check the mime-type for potential Trackback support
+  // before using a full GET request.
+  if (!($result = linkback_trackback_autodiscovery_autodetect_trackback_support_efficiency_check_passes($url))) {
+    return $result;
   }
 
 
@@ -107,6 +99,39 @@ function linkback_trackback_autodiscovery_autodetect_trackback_support($url) {
     watchdog('Trackback', 'Trackback auto-discovery is supported on %url, with the Trackback endpoint %endpoint.', array('@url' => $url, '%endpoint' => $endpoints[$url]), WATCHDOG_DEBUG);
     return $endpoints[$url];
   }
+}
+
+/**
+ * Efficiency check.
+ */
+function linkback_trackback_autodiscovery_autodetect_trackback_support_efficiency_check_passes($url) {
+  // Efficient-mode (the default) uses a HTTP HEAD request to check whether the
+  // content *might* support the Trackback protocol, by checking the mime-type.
+  // Images/media are frequently linked by nodes, but these URLs would not
+  // support Trackback.
+
+  // This check can be bypassed by setting the variable
+  // 'linkback_trackback_autodiscovery_inefficient_mode' to TRUE.
+  // This is "inefficient-mode".
+  $skip_test = variable_get('linkback_trackback_autodiscovery_inefficient_mode', FALSE);
+  if ($skip_test) {
+    return TRUE;
+  }
+
+  // Efficient-mode is active here.  Attempt to check the URL efficiently.
+  $discoverable = _linkback_trackback_autodiscovery_check_url_provides_parsable_content($url);
+
+  // Possible return values from the helper:
+  // - TRUE:  the content *might* support Trackbacks.
+  // - FALSE: the content is unlikely to support Trackbacks.
+  // - NULL:  the remote site did not provide a valid response to a HTTP HEAD request.
+  if (is_null($discoverable)) {
+    watchdog('Trackback', 'Trackback auto-discovery not attempted: an error occurred when making a HEAD request for %url.', array('%url' => $url), WATCHDOG_DEBUG);
+  }
+  else {
+    watchdog('Trackback', 'Trackback auto-discovery not attempted: %url does not appear to be a web page.', array('%url' => $url), WATCHDOG_DEBUG);
+  }
+  return $discoverable;
 }
 
 
@@ -229,7 +254,6 @@ function _linkback_trackback_autodiscovery_strip_comment_tags($html) {
   // so the RDF can be parsed via SimpleXml.
 
   // Simply run every comment tag through a helper function.
-  // The /e modifier invokes replacements via a helper function.
   // The /m modifier indicates multi-line matching, and /s allows the dot [.]
   //   character to include \n (the new-line character).
   // The ? character (in .*?) indicated non-greedy matching.
