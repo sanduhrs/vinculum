@@ -102,8 +102,9 @@ class LinkbackTrackbackAutodiscoveryTestCase extends DrupalWebTestCase {
     $this->verbose('Complex HTML source.' .
                    '<hr />' . str_replace("\n", "<br />\n", htmlentities($html)));
 
+    $url = 'http://www.movabletype.org/trackback/archives/000905.html';
     $endpoint = 'http://www.movabletype.org/mt/trackback/65';
-    $expected_result = array($endpoint);
+    $expected_result = array($url => $endpoint);
     $result = _linkback_trackback_autodiscovery_extract_endpoint_from_html($html);
     $this->assertEqual($result, $expected_result, t('The correct endpoint %endpoint is extracted from complex HTML.', array('%endpoint' => $endpoint)));
   }

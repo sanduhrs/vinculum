@@ -22,7 +22,6 @@ function linkback_trackback_autodiscovery_linkback_handler() {
 function linkback_trackback_autodiscovery_linkback_send($target, $source, $node) {
   // Use auto-discovery to check that the external URL supports trackback.
   if ($trackback_endpoint_url = linkback_trackback_autodiscovery_autodetect_trackback_support($target)) {
-
     $params = array(
       'url' => url("node/{$node->nid}", array('absolute' => TRUE)), 
       'title' => $node->title,
@@ -208,7 +207,9 @@ function _linkback_trackback_autodiscovery_extract_endpoint_from_html($html) {
   // RDF tags can be parsed by SimpleXML
   $html = trim(_linkback_trackback_autodiscovery_strip_comment_tags($html));
 
-  if (!(($result = @simplexml_load_string($html)) || ($result = @simplexml_load_string(_linkback_trackback_autodiscovery_cleanup_html($html))))) {
+  $result = @simplexml_load_string($html) or
+  $result = @simplexml_load_string(_linkback_trackback_autodiscovery_cleanup_html($html));
+  if ($result === FALSE) {
     // If the html can't be loaded by simplexml, abort.
     return NULL;
   }
@@ -242,7 +243,16 @@ function _linkback_trackback_autodiscovery_extract_endpoint_from_html($html) {
  * Attempt to clean HTML to allow SimpleXML to load the HTML.
  */
 function _linkback_trackback_autodiscovery_cleanup_html($html) {
-  // Run it through the filter HTML corrector (filter_htmlcorrector).
+  // Strip everything except the RDF tags.
+  $pattern = '#<rdf:RDF (?:.*?)</rdf:RDF>#ms';
+  if (preg_match($pattern, $html, $matches)) {
+    $res = "<?xml version='1.0'?>";
+    $res .= implode("\n", $matches);
+    return $res;
+  }
+
+  // Final attempt: Run it through the filter HTML corrector
+  // (filter_htmlcorrector).
   return trim(_filter_htmlcorrector($html));
 }
 
