@@ -75,20 +75,25 @@ class LinkbackTrackbackAutodiscoveryTestCase extends DrupalWebTestCase {
     );
 
     foreach ($target_urls as $local_url => $expected_endpoint) {
+      // Get the test endpoint number as a convenient reference for reporting.
+      $section = substr($local_url, -1);
+
       $url = url($local_url, array('absolute' => TRUE));
 
       // Provide debug output for the contents of the URL.
       $debug = drupal_http_request($url);
+
+      $this->assertTrue(strpos($debug->data, 'Testing scenario:') !== FALSE, t('Section @section: Page validation text discovered.', array('@section' => $section)));
+
       $out = str_replace("\n", "<br />\n", htmlentities($debug->data));
       $this->verbose('GET request to: ' . $url .
                      '<hr />HTTP response code: ' . $debug->code .
+                     '<hr />' . $debug->data .
                      '<hr />' . $out);
-
-      $this->assertTrue(strpos($debug->data, 'Testing scenario:') !== FALSE, t('Page validation text discovered.'));
 
       $result = linkback_trackback_autodiscovery_autodetect_trackback_support($url);
       // Use assertIdentical to test for FALSE vs NULL.
-      $this->assertIdentical($result, $expected_endpoint, t('Endpoint correctly discovered for @url', array('@url' => $url)));
+      $this->assertIdentical($result, $expected_endpoint, t('Section @section: Endpoint correctly discovered for @url', array('@url' => $url, '@section' => $section)));
     }
 
     // Test a complex HTML page.
