@@ -95,7 +95,7 @@ function linkback_trackback_autodiscovery_autodetect_trackback_support($url) {
     return FALSE;
   }
   else {
-    watchdog('Trackback', 'Trackback auto-discovery is supported on %url, with the Trackback endpoint %endpoint.', array('@url' => $url, '%endpoint' => $endpoints[$url]), WATCHDOG_DEBUG);
+    watchdog('Trackback', 'Trackback auto-discovery is supported on %url, with the Trackback endpoint %endpoint.', array('%url' => $url, '%endpoint' => $endpoints[$url]), WATCHDOG_DEBUG);
     return $endpoints[$url];
   }
 }
