@@ -5,10 +5,28 @@
 
 /**
  * Receive a trackback request.
+ * This page-callback returns an XML response.
  */
 function linkback_trackback_receive($node) {
+
   // Validate the incoming trackback data.
   if (!_linkback_trackback_is_request_valid()) {
+    // Log the failure.
+    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+      $err = 'The remote server did not provide the URL of the trackback.';
+    }
+    else if (isset($_REQUEST['url'])) {
+      $err = 'The request method was %method instead of POST.';
+    }
+    else {
+      $err = 'The remote server did not provide the URL of the trackback, and the request method was %method instead of POST.';
+    }
+    $params = array(
+      '%method' => $_SERVER['REQUEST_METHOD'],
+      '!node' => l($node->title, "node/{$node->nid}"),
+    );
+    watchdog('Trackback', 'Received an invalid trackback request for !node.' . $err, $params, WATCHDOG_DEBUG);
+
     // Abort early for invalid requests.
     $msg = t('Malformed Trackback request: requests must use POST and provide a url.  See http://www.sixapart.com/pronet/docs/trackback_spec#Sending_a_TrackBack_Ping');
     $response = _linkback_trackback_failure_text($msg);
@@ -23,6 +41,7 @@ function linkback_trackback_receive($node) {
   switch ($result) {
     case LINKBACK_VALIDATES:
       // Report success.
+      watchdog('Trackback', 'Received a successful trackback request for !node.', array('!node' => l($node->title, "node/{$node->nid}")), WATCHDOG_DEBUG);
       $response = _linkback_trackback_success_text();
       return _linkback_trackback_response($response);
       break;
@@ -31,22 +50,27 @@ function linkback_trackback_receive($node) {
     //   wouldn't reach this step (it would be 404'd in hook_menu).
 
     case LINKBACK_ERROR_LOCAL_NODE_LINKBACK_NOT_ALLOWED:
+      watchdog('Trackback', 'Trackback request failed for !node: trackback-receive not enabled.', array('!node' => l($node->title, "node/{$node->nid}")), WATCHDOG_DEBUG);
       $msg = t('Trackbacks are not allowed for this page.');
       break;
 
     case LINKBACK_ERROR_LINKBACK_ALREADY_REGISTERED:
+      watchdog('Trackback', 'Trackback request failed for !node: trackback previously registered.', array('!node' => l($node->title, "node/{$node->nid}")), WATCHDOG_DEBUG);
       $msg = t('The Trackback has already been registered.');
       break;
 
     case LINKBACK_ERROR_REMOTE_URL_NOT_FOUND:
+      watchdog('Trackback', 'Trackback request failed for !node: trackback URL %remote_url not accessible.', array('%remote_url' => $trackback->url, '!node' => l($node->title, "node/{$node->nid}")), WATCHDOG_DEBUG);
       $msg = t('Your page @remote_url could not be reached.', array('@remote_url' => $trackback->url));
       break;
 
     case LINKBACK_ERROR_REMOTE_URL_MISSING_LINK:
+      watchdog('Trackback', 'Trackback request failed for !node: trackback URL %remote_url does not link to the node.', array('%remote_url' => $trackback->url, '!node' => l($node->title, "node/{$node->nid}")), WATCHDOG_DEBUG);
       $msg = t('Your page @remote_url must include a link to the page on this site @local_url.', array('@remote_url' => $trackback->url, '@local_url' => url("node/{$node->nid}", array('absolute' => TRUE))));
       break;
 
     default:
+      watchdog('Trackback', 'Trackback request failed for !node: unknown error.', array('!node' => l($node->title, "node/{$node->nid}")), WATCHDOG_DEBUG);
       $msg = t('An unknown error occurred.');
       break;
   }
