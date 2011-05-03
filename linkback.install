@@ -4,6 +4,35 @@
  * Install functions for the Linkback module.
  */
 
+
+/**
+ * Implements hook_requirements.
+ */
+function linkback_requirements($phase) {
+  $requirements = array();
+  switch ($phase) {
+    case 'runtime':
+      // Linkback is an API which requires at least one handler.
+      $handlers = linkback_get_handler();
+      $requirements['linkback'] = array(
+        'title' => t('Linkback API handlers'), 
+        'value' => format_plural(count($handlers), '@count handler', '@count handlers'),
+      );
+
+      if (empty($handlers)) {
+        $requirements['linkback'] += array(
+          'description' => t('Linkback requires at least one enabled handler-module to function correctly.'),
+          'severity'    => REQUIREMENT_ERROR,
+        );
+      }
+      else {
+        $requirements['linkback']['severity'] = REQUIREMENT_OK;
+      }
+      break;
+  }
+  return $requirements;
+}
+
 /**
  * Implements hook_schema().
  */
