@@ -83,6 +83,9 @@ function linkback_permission() {
   $perms['configure linkback settings'] = array(
     'title' => t('Administer linkback settings'),
   );
+  $perms['view linkback reports'] = array(
+    'title' => t('View linkback reports'),
+  );
 
   foreach (node_permissions_get_configured_types() as $type) {
     $perms += _linkback_list_permissions($type);
@@ -106,14 +109,37 @@ function linkback_theme() {
  * Implements hook_menu().
  */
 function linkback_menu() {
+  // Configuration page.
   $items['admin/config/content/linkback'] = array(
     'title' => 'Linkback',
     'description' => 'Configure trackbacks and pingbacks.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('linkback_settings_form'),
-    'access arguments' => array('configure_linkback_settings'),
+    'access arguments' => array('configure linkback settings'),
     'file' => 'linkback.admin.inc',
   );
+
+  // Reporting.
+  $items['admin/reports/linkback'] = array(
+    'title' => 'Linkback',
+    'description' => 'List linkbacks sent and received.',
+    'page callback' => 'linkback_report_sent',
+    'access arguments' => array('view linkback reports'),
+    'file' => 'linkback.admin.inc',
+  );
+  $items['admin/reports/linkback/sent'] = array(
+    'title' => 'Sent',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['admin/reports/linkback/received'] = array(
+    'title' => 'Received',
+    'page callback' => 'linkback_report_received',
+    'access arguments' => array('view linkback reports'),
+    'file' => 'linkback.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+
   return $items;
 }
 

@@ -89,3 +89,87 @@ function theme_linkback_settings_handlers_form_element($variables) {
 
   return $output;
 }
+
+
+/**
+ * Report of all linkbacks sent.
+ */
+function linkback_report_sent() {
+  $header = array(
+    array('data' => t('Date'),       'field' => 'timestamp',  'sort' => 'desc'),
+    array('data' => t('From'),       'field' => 'n.title'),
+    array('data' => t('Remote URL'), 'field' => 'url'),
+    array('data' => t('Handler'),    'field' => 'handler'),
+  );
+
+
+  $query = db_select('node_linkback_sent', 'l');
+  $query->join('node', 'n', 'n.nid = l.nid');
+  $query->extend('PagerDefault')
+    ->limit(1)
+    ->extend('TableSort')
+    ->orderByHeader($header)
+    ->fields('n', array('title'))
+    ->fields('l');
+
+  $results = $query->execute();
+
+  $handlers = linkback_get_handler();
+
+  $rows = array();
+  foreach ($results as $result) {
+    $rows[] = array(
+      date('d/m/Y H:i', $result->timestamp),
+      l($result->title, "node/{$result->nid}"),
+      l($result->url, $result->url),
+      isset($handlers[$result->handler]) ? $handlers[$result->handler]->protocol : $result->handler,
+    );
+  }
+
+  $html = '';
+  $html .= theme('table', array('header' => $header, 'rows'=>$rows));
+  $html .= theme('pager', array('tags' => array()));
+  return $html;
+}
+
+
+/**
+ * Report of all linkbacks received.
+ */
+function linkback_report_received() {
+  $header = array(
+    array('data' => t('Date'),       'field' => 'timestamp',  'sort' => 'desc'),
+    array('data' => t('Content'),    'field' => 'n.title'),
+    array('data' => t('Remote URL'), 'field' => 'url'),
+    array('data' => t('Handler'),    'field' => 'handler'),
+  );
+
+
+  $query = db_select('node_linkback_received', 'l');
+  $query->join('node', 'n', 'n.nid = l.nid');
+  $query->extend('PagerDefault')
+    ->limit(1)
+    ->extend('TableSort')
+    ->orderByHeader($header)
+    ->fields('n', array('title'))
+    ->fields('l');
+
+  $results = $query->execute();
+
+  $handlers = linkback_get_handler();
+
+  $rows = array();
+  foreach ($results as $result) {
+    $rows[] = array(
+      date('d/m/Y H:i', $result->timestamp),
+      l($result->title, "node/{$result->nid}"),
+      l($result->url, $result->url),
+      isset($handlers[$result->handler]) ? $handlers[$result->handler]->protocol : $result->handler,
+    );
+  }
+
+  $html = '';
+  $html .= theme('table', array('header' => $header, 'rows'=>$rows));
+  $html .= theme('pager', array('tags' => array()));
+  return $html;
+}
