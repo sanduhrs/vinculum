@@ -1,4 +1,4 @@
-name = Linkback - rules actions
+name = Linkback action - rules
 description = Integrate with the rules module to carry out actions when linkbacks are received.
 core = 7.x
 package = Linkback

@@ -1,4 +1,4 @@
-name = Linkback - Trackback autodiscovery
+name = Linkback handler - Trackback autodiscovery
 description = Automatically discover support for the Trackback protocol and send trackbacks.
 core = 7.x
 package = Linkback

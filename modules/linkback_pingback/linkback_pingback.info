@@ -1,4 +1,4 @@
-name = Linkback - Pingback handler
+name = Linkback handler - Pingback
 description = Provides the Pingback protocol for the Linkback module.
 package = Linkback
 core = 7.x

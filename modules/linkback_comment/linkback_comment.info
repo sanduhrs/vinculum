@@ -1,4 +1,4 @@
-name = Linkback - Comment
+name = Linkback action - Comment
 description = Add a comment when a linkback is received.
 core = 7.x
 package = Linkback
