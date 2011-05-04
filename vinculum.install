@@ -1,32 +1,32 @@
 <?php
 /**
  * @file
- * Install functions for the Linkback module.
+ * Install functions for the Vinculum module.
  */
 
 
 /**
  * Implements hook_requirements.
  */
-function linkback_requirements($phase) {
+function vinculum_requirements($phase) {
   $requirements = array();
   switch ($phase) {
     case 'runtime':
-      // Linkback is an API which requires at least one handler.
-      $handlers = linkback_get_handler();
-      $requirements['linkback'] = array(
-        'title' => t('Linkback API handlers'), 
+      // Vinculum is an API which requires at least one handler.
+      $handlers = vinculum_get_handler();
+      $requirements['vinculum'] = array(
+        'title' => t('Vinculum API handlers'), 
         'value' => format_plural(count($handlers), '@count handler', '@count handlers'),
       );
 
       if (empty($handlers)) {
-        $requirements['linkback'] += array(
-          'description' => t('Linkback requires at least one enabled handler-module to function correctly.'),
+        $requirements['vinculum'] += array(
+          'description' => t('Vinculum requires at least one enabled handler-module to function correctly.'),
           'severity'    => REQUIREMENT_ERROR,
         );
       }
       else {
-        $requirements['linkback']['severity'] = REQUIREMENT_OK;
+        $requirements['vinculum']['severity'] = REQUIREMENT_OK;
       }
       break;
   }
@@ -36,19 +36,19 @@ function linkback_requirements($phase) {
 /**
  * Implements hook_schema().
  */
-function linkback_schema() {
+function vinculum_schema() {
   // Provide the tables:
-  // - node_linkback_settings Flags which show if linkback send/receive is
+  // - node_vinculum_settings Flags which show if vinculum send/receive is
   //                          enabled for a given node.
-  // - node_linkback_sent     A list of the linkbacks which have already been
+  // - node_vinculum_sent     A list of the vinculums which have already been
   //                          sent for a given node.
-  // - node_linkback_received A list of the linkbacks which have been received
+  // - node_vinculum_received A list of the vinculums which have been received
   //                          for a given node.
 
   $schema = array();
 
-  $schema['node_linkback_settings'] = array(
-    'description' => 'Flags which show if linkback send/receive is enabled for a given node.',
+  $schema['node_vinculum_settings'] = array(
+    'description' => 'Flags which show if vinculum send/receive is enabled for a given node.',
     'fields' => array(
       'nid' => array(
         'description' => 'The {node}.nid this record affects.',
@@ -75,8 +75,8 @@ function linkback_schema() {
     ),
   );
 
-  $schema['node_linkback_sent'] = array(
-    'description' => 'A list of the linkbacks which have already been sent for a given node.',
+  $schema['node_vinculum_sent'] = array(
+    'description' => 'A list of the vinculums which have already been sent for a given node.',
     'fields' => array(
       'nid' => array(
         'description' => 'The {node}.nid for this record.',
@@ -92,13 +92,13 @@ function linkback_schema() {
         'default' => '',
       ),
       'handler' => array(
-        'description' => "The linkback handler (i.e. the module's name) which reported success.",
+        'description' => "The vinculum handler (i.e. the module's name) which reported success.",
         'type' => 'varchar',
         'length' => 255,
         'default' => NULL,
       ),
       'timestamp' => array(
-        'description' => 'The Unix timestamp when the linkback was most recently attempted.',
+        'description' => 'The Unix timestamp when the vinculum was most recently attempted.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
@@ -110,8 +110,8 @@ function linkback_schema() {
   );
 
 
-  $schema['node_linkback_received'] = array(
-    'description' => 'A list of the linkbacks which have been received for a given node.',
+  $schema['node_vinculum_received'] = array(
+    'description' => 'A list of the vinculums which have been received for a given node.',
     'fields' => array(
       'nid' => array(
         'description' => 'The {node}.nid for this record.',
@@ -127,7 +127,7 @@ function linkback_schema() {
         'default' => '',
       ),
       'handler' => array(
-        'description' => 'The handler (module) which reported the linkback (e.g. pingback, trackback, etc).',
+        'description' => 'The handler (module) which reported the vinculum (e.g. pingback, trackback, etc).',
         'type' => 'varchar',
         'length' => 255,
         'default' => NULL,
@@ -139,7 +139,7 @@ function linkback_schema() {
         'default' => '',
       ),
       'timestamp' => array(
-        'description' => 'The Unix timestamp when the linkback was received.',
+        'description' => 'The Unix timestamp when the vinculum was received.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
@@ -157,12 +157,12 @@ function linkback_schema() {
 /**
  * Implements hook_uninstall().
  */
-function linkback_uninstall() {
+function vinculum_uninstall() {
   // Query the variables-table for a list of all variables provided by the
-  // linkback module.
+  // vinculum module.
   $variables = db_select('variable', 'v', array('target' => 'slave'))
     ->fields('v', array('name'))
-    ->condition("v.name", 'linkback%', 'LIKE')
+    ->condition("v.name", 'vinculum%', 'LIKE')
     ->execute()
     ->fetchAll();
 

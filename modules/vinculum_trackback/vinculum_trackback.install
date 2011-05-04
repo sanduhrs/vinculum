@@ -1,17 +1,17 @@
 <?php
 /**
  * @file
- * Install, update and uninstall functions for the linkback-trackback module.
+ * Install, update and uninstall functions for the vinculum-trackback module.
  */
 
 /**
  * Implements hook_schema().
  */
-function linkback_trackback_schema() {
+function vinculum_trackback_schema() {
   $schema = array();
 
   // Record of each trackback received.
-  $schema['linkback_trackback_received'] = array(
+  $schema['vinculum_trackback_received'] = array(
     'description' => 'The trackbacks which have been received and accepted.',
     'fields' => array(
       'nid' => array(

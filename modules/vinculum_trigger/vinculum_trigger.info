@@ -1,6 +1,6 @@
-name = Linkback action - Trigger
-description = Integrate with the core trigger module to carry out actions when linkbacks are received.
+name = Vinculum action - Trigger
+description = Integrate with the core trigger module to carry out actions when vinculums are received.
 core = 7.x
-package = Linkback
-dependencies[] = linkback
+package = Vinculum
+dependencies[] = vinculum
 dependencies[] = trigger

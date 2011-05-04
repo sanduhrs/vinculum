@@ -1,13 +1,13 @@
 <?php
 /**
  * @file
- * Hooks provided by the linkback module.
+ * Hooks provided by the vinculum module.
  */
 
 /**
- * @defgroup linkback_api_hooks Linkback API Hooks
+ * @defgroup vinculum_api_hooks Vinculum API Hooks
  * @{
- * Functions to integrate with the Linkback module.
+ * Functions to integrate with the Vinculum module.
  * @}
  */
 
@@ -17,28 +17,28 @@
  */
 
 /**
- * Declare a linkback handler.
+ * Declare a vinculum handler.
  *
- * This is a hook used by linkback handler modules. It allows a module to
- * define a handler which implements a linkback protocol.
- * Modules implementing this should also implement hook_linkback_send().
+ * This is a hook used by vinculum handler modules. It allows a module to
+ * define a handler which implements a vinculum protocol.
+ * Modules implementing this should also implement hook_vinculum_send().
  *
  * @return
  *   An array containing the key 'protocol' which provides the human-readable
- *   name of the protocol implemented.  A linkback module can only implement a
+ *   name of the protocol implemented.  A vinculum module can only implement a
  *   single handler.
  *
- * @ingroup linkback_api_hooks
+ * @ingroup vinculum_api_hooks
  */
-function hook_linkback_handler() {
+function hook_vinculum_handler() {
   return array(
     'protocol' => t('Pingback'),
   );
 }
 
 /**
- * Attempt to send a linkback to a single URL for a single node.
- * Modules implementing this must also implement hook_linkback_handler().
+ * Attempt to send a vinculum to a single URL for a single node.
+ * Modules implementing this must also implement hook_vinculum_handler().
  *
  * @param String $target
  *    The URL of the external site. You can assume that the link will always be
@@ -49,30 +49,30 @@ function hook_linkback_handler() {
  *    The node that links to the URL provided.
  *
  * @return Boolean
- * TRUE if the handler was successful in reporting the linkback.
+ * TRUE if the handler was successful in reporting the vinculum.
  */
-function hook_linkback_send($target, $source, $node) {
+function hook_vinculum_send($target, $source, $node) {
 
 }
 
 /**
- * Extend the linkback module to check for external links in fields other than
+ * Extend the vinculum module to check for external links in fields other than
  * the body field.
  */
-function hook_linkback_get_external_links($node) {
+function hook_vinculum_get_external_links($node) {
 
 }
 
 /**
- * Alter the list of external-links to be contacted by a linkback handler.
+ * Alter the list of external-links to be contacted by a vinculum handler.
  *
  * @param Array $links
- * An array of linkback records: each record is an object with the properties:
+ * An array of vinculum records: each record is an object with the properties:
  * - source
  * - target
  */
-function hook_linkback_link_send_alter(&$links) {
-  // Don't attempt linkbacks on example.com domains.
+function hook_vinculum_link_send_alter(&$links) {
+  // Don't attempt vinculums on example.com domains.
   foreach ($links as $key => $record) {
     if (preg_match('#\.example\.com$#', $record->target)) {
       unset($links[$key]);
@@ -81,9 +81,9 @@ function hook_linkback_link_send_alter(&$links) {
 }
 
 /**
- * Actions to be fired when a linkback is received.
+ * Actions to be fired when a vinculum is received.
  */
-function hook_linkback_received_action($record) {
+function hook_vinculum_received_action($record) {
 
 }
 

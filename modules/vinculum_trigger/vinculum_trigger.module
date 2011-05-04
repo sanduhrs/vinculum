@@ -1,23 +1,23 @@
 <?php
 /**
  * @file
- * Integrates with core trigger module to fire events when linkbacks are sent
+ * Integrates with core trigger module to fire events when vinculums are sent
  * or received.
  *
  * Provides:
  * - Registration of trigger actions.
- * - Fires actions when linkbacks are send/received.
+ * - Fires actions when vinculums are send/received.
  * - Default actions to create comments, etc.
  */
 
 /**
  * Implements hook_trigger_info().
  */
-function linkback_trigger_trigger_info() {
+function vinculum_trigger_trigger_info() {
   return array(
-    'linkback' => array(
-      'linkback_receive' => array(
-        'label' => t('When a new linkback is received'),
+    'vinculum' => array(
+      'vinculum_receive' => array(
+        'label' => t('When a new vinculum is received'),
       ),
     ),
   );
@@ -28,23 +28,23 @@ function linkback_trigger_trigger_info() {
 /**
  * Implements hook_action_info().
  */
-function linkback_trigger_action_info() {
+function vinculum_trigger_action_info() {
   return array(
-    'linkback_create_comment_action' => array(
-      'type' => 'linkback',
+    'vinculum_create_comment_action' => array(
+      'type' => 'vinculum',
       'label' => t('Create comment'),
       // Available configuration for the new comments:
       // - Should comment be published?
       'configurable' => TRUE,
-      'triggers' => array('linkback_receive'),
+      'triggers' => array('vinculum_receive'),
     ),
   );
 }
 
 /**
- * Configuration form for the linkback_create_comment_action action.
+ * Configuration form for the vinculum_create_comment_action action.
  */
-function linkback_create_comment_action_form($context) {
+function vinculum_create_comment_action_form($context) {
   $form['status'] = array(
     '#title' => t('Published'),
     '#type' => 'checkbox',
@@ -55,21 +55,21 @@ function linkback_create_comment_action_form($context) {
 }
 
 /**
- * Configuration form submit handler for the linkback_create_comment_action
+ * Configuration form submit handler for the vinculum_create_comment_action
  * action.
  */
-function linkback_create_comment_action__submit($form, $form_state) {
+function vinculum_create_comment_action__submit($form, $form_state) {
   return (bool) array_filter($form_state['values']['status']);
 }
 
 
 
 /**
- * Implements hook_linkback_received_action().
+ * Implements hook_vinculum_received_action().
  */
-function linkback_trigger_linkback_received_action($record) {
-  // Fire the linkback_receive trigger when a linkback is sent.
-  drupal_set_message('DEBUG: the linkback hook is fired.');
-  watchdog('lb', 'linkback hook fired.');
+function vinculum_trigger_vinculum_received_action($record) {
+  // Fire the vinculum_receive trigger when a vinculum is sent.
+  drupal_set_message('DEBUG: the vinculum hook is fired.');
+  watchdog('lb', 'vinculum hook fired.');
 }
 

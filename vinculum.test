@@ -1,24 +1,24 @@
 <?php
 /**
  * @file
- * Tests for the linkback module.
+ * Tests for the vinculum module.
  */
 
 /**
  * Test that the list of handlers is loaded properly.
  */
-class LinkbackLoadHandlersTestCase extends DrupalWebTestCase {
+class VinculumLoadHandlersTestCase extends DrupalWebTestCase {
 
   public static function getInfo() {
     return array(
       'name' => 'API: Load handlers',
-      'description' => 'Test the registration of linkback handlers.',
-      'group' => 'Linkback',
+      'description' => 'Test the registration of vinculum handlers.',
+      'group' => 'Vinculum',
     );
   }
 
   function setUp() {
-    parent::setUp('linkback', 'linkback_dummy_handler');
+    parent::setUp('vinculum', 'vinculum_dummy_handler');
   }
 
 
@@ -27,11 +27,11 @@ class LinkbackLoadHandlersTestCase extends DrupalWebTestCase {
    */
   function testGetModuleWeights() {
     $expected_weights = array(
-      'linkback' => 0,
-      'linkback_dummy_handler' => 0,
+      'vinculum' => 0,
+      'vinculum_dummy_handler' => 0,
     );
 
-    $weights = _linkback_get_module_weights(array('linkback', 'linkback_dummy_handler'));
+    $weights = _vinculum_get_module_weights(array('vinculum', 'vinculum_dummy_handler'));
 
     $this->assertTrue(count($weights) == 2, t('@count weights reported.', array('@count' => count($weights))));
     $this->assertEqual($weights, $expected_weights, t('Helper reports correct weights for the modules.'));
@@ -46,61 +46,61 @@ class LinkbackLoadHandlersTestCase extends DrupalWebTestCase {
     // handler:
     $expected_handler = (object) array(
       'protocol' => t('Dummy handler'),
-      'module'   => 'linkback_dummy_handler',
+      'module'   => 'vinculum_dummy_handler',
       'weight'   => 0,
     );
 
-    $handlers = linkback_load_all_handlers(TRUE);
+    $handlers = vinculum_load_all_handlers(TRUE);
     $this->assertTrue(count($handlers) == 1, t('@count handler loaded.', array('@count' => count($handlers))));
     $this->assertEqual(array_shift($handlers), $expected_handler, t('Handler has correct information.'));
   }
 
   /**
-   * Check that the linkback_load_all_handlers() helper will always provide the
-   * handlers ordered by module-weight, and that the linkback_set_weight()
+   * Check that the vinculum_load_all_handlers() helper will always provide the
+   * handlers ordered by module-weight, and that the vinculum_set_weight()
    * helper will correctly reset the system module-weight caches.
    */
   function testResetModuleWeights() {
     // Enable the second handler.
-    module_enable(array('linkback_dummy_handler2'));
+    module_enable(array('vinculum_dummy_handler2'));
 
     // With both dummy handlers enabled, the protocol-list should show both
     // handlers, ordered by filename
     $expected_handlers = array();
-    $expected_handlers['linkback_dummy_handler'] = (object) array(
+    $expected_handlers['vinculum_dummy_handler'] = (object) array(
       'protocol' => t('Dummy handler'),
-      'module'   => 'linkback_dummy_handler',
+      'module'   => 'vinculum_dummy_handler',
       'weight'   => 0,
     );
-    $expected_handlers['linkback_dummy_handler2'] = (object) array(
+    $expected_handlers['vinculum_dummy_handler2'] = (object) array(
       'protocol' => t('Dummy handler 2'),
-      'module'   => 'linkback_dummy_handler2',
+      'module'   => 'vinculum_dummy_handler2',
       'weight'   => 0,
     );
 
 
-    $handlers = linkback_load_all_handlers(TRUE);
+    $handlers = vinculum_load_all_handlers(TRUE);
     $this->assertTrue(count($handlers) == 2, t('@count handlers loaded.', array('@count' => count($handlers))));
     $this->assertEqual($handlers, $expected_handlers, t('Unweighted handlers are sorted correctly (by module name).'));
 
     // Give the first dummy handler a high weight.
     $weights = array(
-      'linkback_dummy_handler' => 5,
+      'vinculum_dummy_handler' => 5,
     );
-    linkback_set_weights($weights);
+    vinculum_set_weights($weights);
 
     $expected_handlers = array();
-    $expected_handlers['linkback_dummy_handler2'] = (object) array(
+    $expected_handlers['vinculum_dummy_handler2'] = (object) array(
       'protocol' => t('Dummy handler 2'),
-      'module'   => 'linkback_dummy_handler2',
+      'module'   => 'vinculum_dummy_handler2',
       'weight'   => 0,
     );
-    $expected_handlers['linkback_dummy_handler'] = (object) array(
+    $expected_handlers['vinculum_dummy_handler'] = (object) array(
       'protocol' => t('Dummy handler'),
-      'module'   => 'linkback_dummy_handler',
+      'module'   => 'vinculum_dummy_handler',
       'weight'   => 5,
     );
-    $handlers = linkback_load_all_handlers(TRUE);
+    $handlers = vinculum_load_all_handlers(TRUE);
     $this->assertTrue(count($handlers) == 2, t('@count handlers loaded.', array('@count' => count($handlers))));
     $this->assertEqual($handlers, $expected_handlers, t('Weighted handlers are sorted correctly, with the higher-weight module coming second.'));
   }
@@ -109,27 +109,27 @@ class LinkbackLoadHandlersTestCase extends DrupalWebTestCase {
 
 
 /**
- * Test that node-saving triggers the linkback protocol.
+ * Test that node-saving triggers the vinculum protocol.
  */
-class LinkbackSendTestCase extends DrupalWebTestCase {
+class VinculumSendTestCase extends DrupalWebTestCase {
 
   public static function getInfo() {
     return array(
-      'name' => 'API: Send linkbacks',
-      'description' => 'Test that linkbacks are sent when a node is saved.',
-      'group' => 'Linkback',
+      'name' => 'API: Send vinculums',
+      'description' => 'Test that vinculums are sent when a node is saved.',
+      'group' => 'Vinculum',
     );
   }
 
   function setUp() {
-    parent::setUp('linkback', 'linkback_dummy_handler');
+    parent::setUp('vinculum', 'vinculum_dummy_handler');
 
     // Create a dummy content-type
     $type = array(
-      'type' => 'linkback_dummy_contenttype',
-      'name' => st('Linkback dummy content-type'),
+      'type' => 'vinculum_dummy_contenttype',
+      'name' => st('Vinculum dummy content-type'),
       'base' => 'node_content',
-      'description' => st("A dummy content-type, used for testing the Linkback module. This content-type should not be visible."),
+      'description' => st("A dummy content-type, used for testing the Vinculum module. This content-type should not be visible."),
       'custom' => 1,
       'modified' => 1,
       'locked' => 0,
@@ -150,7 +150,7 @@ class LinkbackSendTestCase extends DrupalWebTestCase {
 
     // Dummy node, not to be used with drupalCreateNode().
     $node = new stdClass;
-    $node->type = 'linkback_dummy_contenttype';
+    $node->type = 'vinculum_dummy_contenttype';
     $node->body = array(
       LANGUAGE_NONE => array(
         0 => array(
@@ -162,7 +162,7 @@ class LinkbackSendTestCase extends DrupalWebTestCase {
 
     // The expected text is the source text, wrapped in <p> tags. with the links wrapped in <a> tags.
     $expected = '<p>Example plain text which suggests the links <a href="http://example.com/">http://example.com/</a> and <a href="http://foo.example.com/bar/x.html">http://foo.example.com/bar/x.html</a></p>';
-    $extract = trim(_linkback_extract_text($node));
+    $extract = trim(_vinculum_extract_text($node));
     $this->assertEqual($expected, $extract, t('Helper correctly extracts the text from the field.'));
   }
 
@@ -181,38 +181,38 @@ class LinkbackSendTestCase extends DrupalWebTestCase {
       'http://foo.example.com/bar/x.html',
     );
 
-    $links = _linkback_extract_urls($text);
+    $links = _vinculum_extract_urls($text);
 
     $this->assertTrue(count($links) == 2, t('@count links reported.', array('@count' => count($links))));
     $this->assertEqual($links, $expected_links, t('Helper reports correct links for the sample text.'));
   }
 
   /**
-   * Test that the helper to send a single linkback is processed.
+   * Test that the helper to send a single vinculum is processed.
    */
-  function testSendSingleLinkback() {
+  function testSendSingleVinculum() {
     $node = $this->drupalCreateNode();
     $source = "node/{$node->nid}";
     $target = "http://example.com/";
-    $handler_result = linkback_send_single_linkback($source, $target, $node);
-    $this->assertTrue($handler_result, t('The dummy linkback handler reports success.'));
+    $handler_result = vinculum_send_single_vinculum($source, $target, $node);
+    $this->assertTrue($handler_result, t('The dummy vinculum handler reports success.'));
 
-    $linkback_is_recorded = linkback_is_sent($node->nid, $target);
-    $this->assertTrue($linkback_is_recorded, t('The linkback has been tracked in the DB.'));
+    $vinculum_is_recorded = vinculum_is_sent($node->nid, $target);
+    $this->assertTrue($vinculum_is_recorded, t('The vinculum has been tracked in the DB.'));
   }
 
   /**
-   * Test that linkbacks are attempted when a node is saved.
+   * Test that vinculums are attempted when a node is saved.
    */
-  function testSendLinkbacks() {
+  function testSendVinculums() {
     $text = "
       This is a section of test text which <a href='http://example.com/'>links
       to example</a> and <a href='http://foo.example.com/bar/x.html'>links to
       another example</a>.";
 
     $settings = array(
-      'type' => 'linkback_dummy_contenttype',
-      'title' => 'Example node used for testing the linkback module.',
+      'type' => 'vinculum_dummy_contenttype',
+      'title' => 'Example node used for testing the vinculum module.',
       'body' => array(
         LANGUAGE_NONE => array(
           0 => array(
@@ -225,14 +225,14 @@ class LinkbackSendTestCase extends DrupalWebTestCase {
     $node = $this->drupalCreateNode($settings);
 
     // After the node is saved, a record should be added to the
-    // {node_linkback_sent table recording 'linkback_dummy_handler' as the
-    // handler which successfully sent the linkback.
+    // {node_vinculum_sent table recording 'vinculum_dummy_handler' as the
+    // handler which successfully sent the vinculum.
     $target = 'http://example.com/';
-    $success = linkback_is_sent($node->nid, $target);
+    $success = vinculum_is_sent($node->nid, $target);
     $this->assertTrue($success, t('The link to @target has been successfully recorded.', array('@target' => $target)));
 
     $target = 'http://foo.example.com/bar/x.html';
-    $success = linkback_is_sent($node->nid, $target);
+    $success = vinculum_is_sent($node->nid, $target);
     $this->assertTrue($success, t('The link to @target has been successfully recorded.', array('@target' => $target)));
   }
 
@@ -240,28 +240,28 @@ class LinkbackSendTestCase extends DrupalWebTestCase {
 
 
 /**
- * Test that node-saving triggers the linkback protocol.
+ * Test that node-saving triggers the vinculum protocol.
  */
-class LinkbackTestSuiteTestCase extends DrupalWebTestCase {
+class VinculumTestSuiteTestCase extends DrupalWebTestCase {
 
   public static function getInfo() {
     return array(
       'name' => 'API: Test whole suite',
       'description' => 'Test the full pingback/trackback process with dummy test endpoints.',
-      'group' => 'Linkback',
+      'group' => 'Vinculum',
     );
   }
 
   function setUp() {
-    parent::setUp('linkback', 'linkback_pingback', 'linkback_trackback', 'linkback_trackback_autodiscovery', 'linkback_dummy_endpoints');
+    parent::setUp('vinculum', 'vinculum_pingback', 'vinculum_trackback', 'vinculum_trackback_autodiscovery', 'vinculum_dummy_endpoints');
 
     // Create a dummy content-type
-    $type_machine_name = 'linkback_dummy_contenttype';
+    $type_machine_name = 'vinculum_dummy_contenttype';
     $type = array(
       'type' => $type_machine_name,
-      'name' => st('Linkback dummy content-type'),
+      'name' => st('Vinculum dummy content-type'),
       'base' => 'node_content',
-      'description' => st("A dummy content-type, used for testing the Linkback module. This content-type should not be visible."),
+      'description' => st("A dummy content-type, used for testing the Vinculum module. This content-type should not be visible."),
       'custom' => 1,
       'modified' => 1,
       'locked' => 0,
@@ -270,8 +270,8 @@ class LinkbackTestSuiteTestCase extends DrupalWebTestCase {
     node_type_save($type);
     node_add_body_field($type);
 
-    // Allow linkbacks to be sent for this content-type.
-    variable_set("linkback_send_{$type_machine_name}", TRUE);
+    // Allow vinculums to be sent for this content-type.
+    variable_set("vinculum_send_{$type_machine_name}", TRUE);
   }
 
 
@@ -283,20 +283,20 @@ class LinkbackTestSuiteTestCase extends DrupalWebTestCase {
   function testSetup() {
     // Check that the helper functions can properly extract the URLs from the node.
 
-    $url = url('linkback_dummy_endpoints/no_linkback_support', array('absolute' => TRUE));
+    $url = url('vinculum_dummy_endpoints/no_vinculum_support', array('absolute' => TRUE));
     // $text = "
     //   This is a section of test text which <a href='{$url}'>links to a test
     //   endpoint</a>.";
     $text = "This is a section of test text which references {$url}.";
 
     // Check that the correct URL is extracted from the text.
-    $links = _linkback_extract_urls($text);
+    $links = _vinculum_extract_urls($text);
     $expected = array($url);
     $this->assertEqual($links, $expected, t('Links can be extracted from the text.'));
 
     $settings = array(
-      'type' => 'linkback_dummy_contenttype',
-      'title' => 'Example node used for testing the linkback module.',
+      'type' => 'vinculum_dummy_contenttype',
+      'title' => 'Example node used for testing the vinculum module.',
       'body' => array(
         LANGUAGE_NONE => array(
           0 => array(
@@ -310,27 +310,27 @@ class LinkbackTestSuiteTestCase extends DrupalWebTestCase {
 
     // Check that the correct URL is extracted from the node.
     $node = node_load($node->nid);
-    $links = linkback_get_external_links($node);
+    $links = vinculum_get_external_links($node);
     $expected = array($url);
     $this->assertEqual($links, $expected, t('Links can be extracted from the node.'));
   }
 
 
   /**
-   * Support for an endpoint with no linkback support.
+   * Support for an endpoint with no vinculum support.
    */
-  function testNoLinkbackSupport() {
-    // Create a node linking to linkback_dummy_endpoints/no_linkback_support.
-    // The linkback should report failure.
+  function testNoVinculumSupport() {
+    // Create a node linking to vinculum_dummy_endpoints/no_vinculum_support.
+    // The vinculum should report failure.
 
-    $url = url('linkback_dummy_endpoints/no_linkback_support', array('absolute' => TRUE));
+    $url = url('vinculum_dummy_endpoints/no_vinculum_support', array('absolute' => TRUE));
     $text = "
       This is a section of test text which <a href='{$url}'>links to a test
       endpoint</a>.";
 
     $settings = array(
-      'type' => 'linkback_dummy_contenttype',
-      'title' => 'Example node used for testing the linkback module.',
+      'type' => 'vinculum_dummy_contenttype',
+      'title' => 'Example node used for testing the vinculum module.',
       'body' => array(
         LANGUAGE_NONE => array(
           0 => array(
@@ -342,15 +342,15 @@ class LinkbackTestSuiteTestCase extends DrupalWebTestCase {
     );
     $node = $this->drupalCreateNode($settings);
 
-    // This should change the {node_linkback_sent} table: a new entry should be
+    // This should change the {node_vinculum_sent} table: a new entry should be
     // added with the nid/URL, but handler should be NULL.
-    $result = db_select('node_linkback_sent', 'nls')
+    $result = db_select('node_vinculum_sent', 'nls')
       ->fields('nls', array('handler'))
       ->condition('nls.nid', $node->nid)
       ->condition('nls.url', $url)
       ->execute()
       ->fetchObject();
-    $this->assertNull($result->handler, t("When linkbacks aren't supported, a NULL entry is recorded in {node_linkback_sent}."));
+    $this->assertNull($result->handler, t("When vinculums aren't supported, a NULL entry is recorded in {node_vinculum_sent}."));
   }
 
   // 
@@ -358,17 +358,17 @@ class LinkbackTestSuiteTestCase extends DrupalWebTestCase {
   //  * Support for Pingback only.
   //  */
   // function testPingbackOnlySupport() {
-  //   // Create a node linking to linkback_dummy_endpoints/no_linkback_support.
-  //   // The linkback should report failure.
+  //   // Create a node linking to vinculum_dummy_endpoints/no_vinculum_support.
+  //   // The vinculum should report failure.
   // 
-  //   $url = url('linkback_dummy_endpoints/pingback_only', array('absolute' => TRUE));
+  //   $url = url('vinculum_dummy_endpoints/pingback_only', array('absolute' => TRUE));
   //   $text = "
   //     This is a section of test text which <a href='{$url}'>links to a test
   //     endpoint</a>.";
   // 
   //   $settings = array(
-  //     'type' => 'linkback_dummy_contenttype',
-  //     'title' => 'Example node used for testing the linkback module.',
+  //     'type' => 'vinculum_dummy_contenttype',
+  //     'title' => 'Example node used for testing the vinculum module.',
   //     'body' => array(
   //       LANGUAGE_NONE => array(
   //         0 => array(
@@ -380,15 +380,15 @@ class LinkbackTestSuiteTestCase extends DrupalWebTestCase {
   //   );
   //   $node = $this->drupalCreateNode($settings);
   // 
-  //   // This should change the {node_linkback_sent} table: a new entry should be
-  //   // added with the nid/URL, with the handler set to 'linkback_pingback'.
-  //   $result = db_select('node_linkback_sent', 'nls')
+  //   // This should change the {node_vinculum_sent} table: a new entry should be
+  //   // added with the nid/URL, with the handler set to 'vinculum_pingback'.
+  //   $result = db_select('node_vinculum_sent', 'nls')
   //     ->fields('nls', array('handler'))
   //     ->condition('nls.nid', $node->nid)
   //     ->condition('nls.url', $url)
   //     ->execute()
   //     ->fetchAll();
-  //   $this->assertEqual($result->handler, 'linkback_pingback', t("When an endpoint supports only pingback, an entry is recorded in {node_linkback_sent} with the handler 'linkback_pingback'."));
+  //   $this->assertEqual($result->handler, 'vinculum_pingback', t("When an endpoint supports only pingback, an entry is recorded in {node_vinculum_sent} with the handler 'vinculum_pingback'."));
   // }
 
 
@@ -396,23 +396,23 @@ class LinkbackTestSuiteTestCase extends DrupalWebTestCase {
    * Support for Trackback only.
    */
   function testTrackbackOnlySupport() {
-    // The target for this test is linkback_dummy_endpoints/trackback_only
-    $url = url('linkback_dummy_endpoints/trackback_only', array('absolute' => TRUE));
+    // The target for this test is vinculum_dummy_endpoints/trackback_only
+    $url = url('vinculum_dummy_endpoints/trackback_only', array('absolute' => TRUE));
 
     // The endpoint at $url should support auto-discovery of trackbacks.
-    $trackback_endpoint_url = linkback_trackback_autodiscovery_autodetect_trackback_support($url);
-    $expected = url(LINKBACK_TEST_TRACKBACK_ENDPOINT, array('absolute' => TRUE));
+    $trackback_endpoint_url = vinculum_trackback_autodiscovery_autodetect_trackback_support($url);
+    $expected = url(VINCULUM_TEST_TRACKBACK_ENDPOINT, array('absolute' => TRUE));
     $this->assertEqual($trackback_endpoint_url, $expected, t('Correct endpoint auto-discovered in the test URL at %url', array('%url', $url)));
 
-    // Create a node linking to linkback_dummy_endpoints/no_linkback_support.
-    // The linkback should report failure.
+    // Create a node linking to vinculum_dummy_endpoints/no_vinculum_support.
+    // The vinculum should report failure.
     $text = "
       This is a section of test text which <a href='{$url}'>links to a test
       endpoint</a>.";
 
     $settings = array(
-      'type' => 'linkback_dummy_contenttype',
-      'title' => 'Example node used for testing the linkback module.',
+      'type' => 'vinculum_dummy_contenttype',
+      'title' => 'Example node used for testing the vinculum module.',
       'body' => array(
         LANGUAGE_NONE => array(
           0 => array(
@@ -424,18 +424,18 @@ class LinkbackTestSuiteTestCase extends DrupalWebTestCase {
     );
     $node = $this->drupalCreateNode($settings);
 
-    // This should change the {node_linkback_sent} table: a new entry should be
-    // added with the nid/URL, with the handler set to 'linkback_pingback'.
-    $result = db_select('node_linkback_sent', 'nls')
+    // This should change the {node_vinculum_sent} table: a new entry should be
+    // added with the nid/URL, with the handler set to 'vinculum_pingback'.
+    $result = db_select('node_vinculum_sent', 'nls')
       ->fields('nls', array('handler'))
       ->condition('nls.nid', $node->nid)
       ->condition('nls.url', $url)
       ->execute()
       ->fetchObject();
-    $this->assertEqual($result->handler, 'linkback_trackback_autodiscovery', t("When an endpoint supports only trackback, an entry is recorded in {node_linkback_sent} with the handler 'linkback_trackback_autodiscovery'."));
+    $this->assertEqual($result->handler, 'vinculum_trackback_autodiscovery', t("When an endpoint supports only trackback, an entry is recorded in {node_vinculum_sent} with the handler 'vinculum_trackback_autodiscovery'."));
 
     // The endpoint should add an entry into the variables table for
-    // linkback_testing_last_trackback.
+    // vinculum_testing_last_trackback.
     $expected = array(
       'url'       => url("node/{$node->nid}", array('absolute' => TRUE)),
       'title'     => $node->title,
@@ -443,7 +443,7 @@ class LinkbackTestSuiteTestCase extends DrupalWebTestCase {
       'excerpt'   => NULL,
     );
     $this->refreshVariables();
-    $result = variable_get('linkback_testing_last_trackback', FALSE);
+    $result = variable_get('vinculum_testing_last_trackback', FALSE);
 
 
     $this->verbose('<h1>Expected results</h1>'

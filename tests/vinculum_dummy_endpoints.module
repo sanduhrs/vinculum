@@ -6,58 +6,58 @@
  */
 
 // Internal path to the pingback's test endpoint.
-define('LINKBACK_TEST_PINGBACK_ENDPOINT', 'linkback_dummy_endpoints/pingback_endpoint');
+define('VINCULUM_TEST_PINGBACK_ENDPOINT', 'vinculum_dummy_endpoints/pingback_endpoint');
 
 // Internal path to the trackback's test endpoint.
-define('LINKBACK_TEST_TRACKBACK_ENDPOINT', 'linkback_dummy_endpoints/trackback_endpoint');
+define('VINCULUM_TEST_TRACKBACK_ENDPOINT', 'vinculum_dummy_endpoints/trackback_endpoint');
 
 /**
  * Implements hook_menu().
  */
-function linkback_dummy_endpoints_menu() {
+function vinculum_dummy_endpoints_menu() {
 
   // Endpoint for registering test Pingbacks.
-  $items[LINKBACK_TEST_PINGBACK_ENDPOINT] = array(
+  $items[VINCULUM_TEST_PINGBACK_ENDPOINT] = array(
     'title' => 'Endpoint for receiving test pingbacks',
-    'page callback' => 'linkback_dummy_endpoints__handle_pingback',
+    'page callback' => 'vinculum_dummy_endpoints__handle_pingback',
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
 
   // Endpoint for registering test Trackbacks.
-  $items[LINKBACK_TEST_TRACKBACK_ENDPOINT] = array(
+  $items[VINCULUM_TEST_TRACKBACK_ENDPOINT] = array(
     'title' => 'Endpoint for receiving test pingbacks',
-    'page callback' => 'linkback_dummy_endpoints__handle_trackback',
+    'page callback' => 'vinculum_dummy_endpoints__handle_trackback',
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
 
 
 
-  $items['linkback_dummy_endpoints/no_linkback_support'] = array(
+  $items['vinculum_dummy_endpoints/no_vinculum_support'] = array(
     'title' => 'Dummy Trackback testing endpoint',
-    'page callback' => 'linkback_dummy_endpoints_serve_page',
+    'page callback' => 'vinculum_dummy_endpoints_serve_page',
     'page arguments' => array(1),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
-  $items['linkback_dummy_endpoints/pingback_only'] = array(
+  $items['vinculum_dummy_endpoints/pingback_only'] = array(
     'title' => 'Dummy Trackback testing endpoint',
-    'page callback' => 'linkback_dummy_endpoints_serve_page',
+    'page callback' => 'vinculum_dummy_endpoints_serve_page',
     'page arguments' => array(1),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
-  $items['linkback_dummy_endpoints/trackback_only'] = array(
+  $items['vinculum_dummy_endpoints/trackback_only'] = array(
     'title' => 'Dummy Trackback testing endpoint',
-    'page callback' => 'linkback_dummy_endpoints_serve_page',
+    'page callback' => 'vinculum_dummy_endpoints_serve_page',
     'page arguments' => array(1),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
-  $items['linkback_dummy_endpoints/pingback_and_trackback'] = array(
+  $items['vinculum_dummy_endpoints/pingback_and_trackback'] = array(
     'title' => 'Dummy Trackback testing endpoint',
-    'page callback' => 'linkback_dummy_endpoints_serve_page',
+    'page callback' => 'vinculum_dummy_endpoints_serve_page',
     'page arguments' => array(1),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
@@ -68,14 +68,14 @@ function linkback_dummy_endpoints_menu() {
 /**
  * Page-handler.
  */
-function linkback_dummy_endpoints_serve_page($arg) {
-  $pingback_endpoint  = url(LINKBACK_TEST_PINGBACK_ENDPOINT, array('absolute' => TRUE));
-  $trackback_endpoint = url(LINKBACK_TEST_TRACKBACK_ENDPOINT, array('absolute' => TRUE));
+function vinculum_dummy_endpoints_serve_page($arg) {
+  $pingback_endpoint  = url(VINCULUM_TEST_PINGBACK_ENDPOINT, array('absolute' => TRUE));
+  $trackback_endpoint = url(VINCULUM_TEST_TRACKBACK_ENDPOINT, array('absolute' => TRUE));
 
   $content = array();
   switch ($arg) {
-    case 'no_linkback_support';
-      $content['text']['#markup'] = t('No linkback support.');
+    case 'no_vinculum_support';
+      $content['text']['#markup'] = t('No vinculum support.');
       break;
 
     case 'pingback_only';
@@ -123,7 +123,7 @@ function linkback_dummy_endpoints_serve_page($arg) {
 /**
  * Endpoint for registering test Pingbacks.
  */
-function linkback_dummy_endpoints__handle_pingback() {
+function vinculum_dummy_endpoints__handle_pingback() {
   // @TODO.
 
 }
@@ -131,7 +131,7 @@ function linkback_dummy_endpoints__handle_pingback() {
 /**
  * Endpoint for registering test Trackbacks.
  */
-function linkback_dummy_endpoints__handle_trackback() {
+function vinculum_dummy_endpoints__handle_trackback() {
   // Expect trackback submissions to be a POST request with the following
   // parameters:
   // - url
@@ -143,14 +143,14 @@ function linkback_dummy_endpoints__handle_trackback() {
   $params = array(
     '!request_data' => str_replace("\n", "<br />\n", var_export($_REQUEST, TRUE))
   );
-  watchdog('Linkback dummy endpoint', 'Handling trackback at endpoint with request data: !request_data', $params, WATCHDOG_DEBUG);
+  watchdog('Vinculum dummy endpoint', 'Handling trackback at endpoint with request data: !request_data', $params, WATCHDOG_DEBUG);
 
   // All responses are XML format.
   drupal_add_http_header('Content-Type', 'text/xml');
 
   // MUST provide a URL parameter, and MUST be POST.
   if ($_SERVER['REQUEST_METHOD'] != 'POST' || !isset($_REQUEST['url'])) {
-    watchdog('Linkback dummy endpoint', 'Failing trackback request.', array(), WATCHDOG_DEBUG);
+    watchdog('Vinculum dummy endpoint', 'Failing trackback request.', array(), WATCHDOG_DEBUG);
 
     drupal_add_http_header('Status', '400 Bad Request');
 
@@ -166,7 +166,7 @@ function linkback_dummy_endpoints__handle_trackback() {
     $response = implode("\n", $response);
 
     // Provide feedback for the test script to track.
-    variable_set('linkback_testing_last_trackback', t('Trackback request failed.'));
+    variable_set('vinculum_testing_last_trackback', t('Trackback request failed.'));
 
     echo $response;
     return NULL;
@@ -179,10 +179,10 @@ function linkback_dummy_endpoints__handle_trackback() {
     'excerpt'   => isset($_REQUEST['excerpt'])   ? $_REQUEST['excerpt'] : NULL,
   );
 
-  watchdog('Linkback dummy endpoint', 'Passing trackback request.', array(), WATCHDOG_DEBUG);
+  watchdog('Vinculum dummy endpoint', 'Passing trackback request.', array(), WATCHDOG_DEBUG);
 
   // Set the incoming data to a variable for the test script to check.
-  variable_set('linkback_testing_last_trackback', $trackback);
+  variable_set('vinculum_testing_last_trackback', $trackback);
 
   // Report success.
   $response = array();

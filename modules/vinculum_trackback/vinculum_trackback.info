@@ -1,7 +1,7 @@
-name = Linkback handler - Trackback API
-description = Provides an API for using the Trackback protocol for the Linkback module.
+name = Vinculum handler - Trackback API
+description = Provides an API for using the Trackback protocol for the Vinculum module.
 core = 7.x
-package = Linkback
-dependencies[] = linkback
-files[] = linkback_trackback.module
-files[] = linkback_trackback.test
+package = Vinculum
+dependencies[] = vinculum
+files[] = vinculum_trackback.module
+files[] = vinculum_trackback.test

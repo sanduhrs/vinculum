@@ -1,38 +1,38 @@
 <?php
 /**
  * @file
- * Simple module to add a comment when a linkback is received.
+ * Simple module to add a comment when a vinculum is received.
  */
 
 /**
- * Implements hook_linkback_received_action().
+ * Implements hook_vinculum_received_action().
  */
-function linkback_comment_linkback_received_action($linkback) {
+function vinculum_comment_vinculum_received_action($vinculum) {
   // @TODO: support customisable filter format.
   $format = 'filtered_html';
 
   // Trackbacks can provide more valuable information than pingbacks (e.g.
   // the blog name, the title of the remote post, etc). Use this information
   // if it's provided.
-  switch ($linkback->handler) {
+  switch ($vinculum->handler) {
 
-    case 'linkback_pingback':
+    case 'vinculum_pingback':
       // @TODO: Fetch an excerpt to use for the comment body.
-      $comment_text = t('<p>Ping from <a href="@blog_url">@blog_url</a>.</p>', array('@blog_url' => $linkback->url));
+      $comment_text = t('<p>Ping from <a href="@blog_url">@blog_url</a>.</p>', array('@blog_url' => $vinculum->url));
 
       $comment = (object) array(
         'cid'      => NULL,
         'pid'      => 0,
-        'nid'      => $linkback->nid,
+        'nid'      => $vinculum->nid,
         // The anonymous user is hard-coded in Drupal to use uid 0.
         'uid'      => 0,
-        'subject'  => t('Pingback from @url', array('@url' => $linkback->url)),
-        'created'  => $linkback->timestamp,
-        'changed'  => $linkback->timestamp,
+        'subject'  => t('Pingback from @url', array('@url' => $vinculum->url)),
+        'created'  => $vinculum->timestamp,
+        'changed'  => $vinculum->timestamp,
         'status'   => COMMENT_PUBLISHED,
         'name'     => $comment->name,
         'mail'     => '',
-        'homepage' => $linkback->url,
+        'homepage' => $vinculum->url,
         // @TODO: Language settings:
         // - Detect the language of the comment?
         // - Match the language of the node?
@@ -50,24 +50,24 @@ function linkback_comment_linkback_received_action($linkback) {
       );
       break;
 
-    case 'linkback_trackback':
-      $trackback = $linkback->data;
-      $comment_text = t('<p>Trackback from <a href="@blog_url">@blog_url</a>.</p>', array('@blog_url' => $linkback->url));
+    case 'vinculum_trackback':
+      $trackback = $vinculum->data;
+      $comment_text = t('<p>Trackback from <a href="@blog_url">@blog_url</a>.</p>', array('@blog_url' => $vinculum->url));
       $comment_text .= check_markup('<p>' . $trackback->excerpt . '</p>', $format);
 
       $comment = (object) array(
         'cid'      => NULL,
         'pid'      => 0,
-        'nid'      => $linkback->nid,
+        'nid'      => $vinculum->nid,
         // The anonymous user is hard-coded in Drupal to use uid 0.
         'uid'      => 0,
         'subject'  => t('Trackback: @title', array('@title' => $trackback->title)),
-        'created'  => $linkback->timestamp,
-        'changed'  => $linkback->timestamp,
+        'created'  => $vinculum->timestamp,
+        'changed'  => $vinculum->timestamp,
         'status'   => COMMENT_PUBLISHED,
         'name'     => t('Blog: @name', array('@name' => $trackback->blog_name)),
         'mail'     => '',
-        'homepage' => $linkback->url,
+        'homepage' => $vinculum->url,
         // @TODO: Language settings:
         // - Detect the language of the comment?
         // - Match the language of the node?
@@ -89,12 +89,12 @@ function linkback_comment_linkback_received_action($linkback) {
   comment_save($comment);
 
   // The comment module forces 'hostname' to use ip_address().
-  // Linkbacks can be saved through an API (where the origin_ip parameter
+  // Vinculums can be saved through an API (where the origin_ip parameter
   // provides the original ip address), so update the comment table's value
   // here.
   db_update('comment')
     ->fields(array(
-      'hostname' => $linkback->origin_ip,
+      'hostname' => $vinculum->origin_ip,
     ))
     ->condition('cid', $comment->cid)
     ->execute();

@@ -7,10 +7,10 @@
  * Receive a trackback request.
  * This page-callback returns an XML response.
  */
-function linkback_trackback_receive($node) {
+function vinculum_trackback_receive($node) {
 
   // Validate the incoming trackback data.
-  if (!_linkback_trackback_is_request_valid()) {
+  if (!_vinculum_trackback_is_request_valid()) {
     // Log the failure.
     if ($_SERVER['REQUEST_METHOD'] == 'POST') {
       $err = 'The remote server did not provide the URL of the trackback.';
@@ -29,42 +29,42 @@ function linkback_trackback_receive($node) {
 
     // Abort early for invalid requests.
     $msg = t('Malformed Trackback request: requests must use POST and provide a url.  See http://www.sixapart.com/pronet/docs/trackback_spec#Sending_a_TrackBack_Ping');
-    $response = _linkback_trackback_failure_text($msg);
-    return _linkback_trackback_response($response, TRUE);
+    $response = _vinculum_trackback_failure_text($msg);
+    return _vinculum_trackback_response($response, TRUE);
   }
 
-  $trackback = _linkback_trackback_build_trackback($node->nid);
+  $trackback = _vinculum_trackback_build_trackback($node->nid);
   // Attempt to save the trackback.
   // A non-zero value for $result indicates an error.
-  $result = linkback_trackback_save_trackback($trackback);
+  $result = vinculum_trackback_save_trackback($trackback);
 
   switch ($result) {
-    case LINKBACK_VALIDATES:
+    case VINCULUM_VALIDATES:
       // Report success.
       watchdog('Trackback', 'Received a successful trackback request for !node.', array('!node' => l($node->title, "node/{$node->nid}")), WATCHDOG_DEBUG);
-      $response = _linkback_trackback_success_text();
-      return _linkback_trackback_response($response);
+      $response = _vinculum_trackback_success_text();
+      return _vinculum_trackback_response($response);
       break;
 
-    // case LINKBACK_ERROR_LOCAL_NODE_NOT_FOUND:
+    // case VINCULUM_ERROR_LOCAL_NODE_NOT_FOUND:
     //   wouldn't reach this step (it would be 404'd in hook_menu).
 
-    case LINKBACK_ERROR_LOCAL_NODE_LINKBACK_NOT_ALLOWED:
+    case VINCULUM_ERROR_LOCAL_NODE_VINCULUM_NOT_ALLOWED:
       watchdog('Trackback', 'Trackback request failed for !node: trackback-receive not enabled.', array('!node' => l($node->title, "node/{$node->nid}")), WATCHDOG_DEBUG);
       $msg = t('Trackbacks are not allowed for this page.');
       break;
 
-    case LINKBACK_ERROR_LINKBACK_ALREADY_REGISTERED:
+    case VINCULUM_ERROR_VINCULUM_ALREADY_REGISTERED:
       watchdog('Trackback', 'Trackback request failed for !node: trackback previously registered.', array('!node' => l($node->title, "node/{$node->nid}")), WATCHDOG_DEBUG);
       $msg = t('The Trackback has already been registered.');
       break;
 
-    case LINKBACK_ERROR_REMOTE_URL_NOT_FOUND:
+    case VINCULUM_ERROR_REMOTE_URL_NOT_FOUND:
       watchdog('Trackback', 'Trackback request failed for !node: trackback URL %remote_url not accessible.', array('%remote_url' => $trackback->url, '!node' => l($node->title, "node/{$node->nid}")), WATCHDOG_DEBUG);
       $msg = t('Your page @remote_url could not be reached.', array('@remote_url' => $trackback->url));
       break;
 
-    case LINKBACK_ERROR_REMOTE_URL_MISSING_LINK:
+    case VINCULUM_ERROR_REMOTE_URL_MISSING_LINK:
       watchdog('Trackback', 'Trackback request failed for !node: trackback URL %remote_url does not link to the node.', array('%remote_url' => $trackback->url, '!node' => l($node->title, "node/{$node->nid}")), WATCHDOG_DEBUG);
       $msg = t('Your page @remote_url must include a link to the page on this site @local_url.', array('@remote_url' => $trackback->url, '@local_url' => url("node/{$node->nid}", array('absolute' => TRUE))));
       break;
@@ -74,14 +74,14 @@ function linkback_trackback_receive($node) {
       $msg = t('An unknown error occurred.');
       break;
   }
-  $response = _linkback_trackback_failure_text($msg);
-  return _linkback_trackback_response($response, TRUE);
+  $response = _vinculum_trackback_failure_text($msg);
+  return _vinculum_trackback_response($response, TRUE);
 }
 
 /**
  * Display the response.
  */
-function _linkback_trackback_response($response, $error = FALSE) {
+function _vinculum_trackback_response($response, $error = FALSE) {
   drupal_add_http_header('Content-Type', 'text/xml');
   if ($error) {
     // Provide a generic HTTP error code.
@@ -101,7 +101,7 @@ function _linkback_trackback_response($response, $error = FALSE) {
 /**
  * Get the text for reporting a successful Trackback request.
  */
-function _linkback_trackback_success_text() {
+function _vinculum_trackback_success_text() {
   // The Trackback standard's response format for successful requests.
   $response = array();
   $response[] = '<?xml version="1.0" encoding="utf-8"?>';
@@ -117,7 +117,7 @@ function _linkback_trackback_success_text() {
 /**
  * Get the text for reporting a failed Trackback request.
  */
-function _linkback_trackback_failure_text($msg) {
+function _vinculum_trackback_failure_text($msg) {
   // The Trackback standard's response format for failed requests.
   $response = array();
   $response[] = '<?xml version="1.0" encoding="utf-8"?>';
@@ -135,7 +135,7 @@ function _linkback_trackback_failure_text($msg) {
 /**
  * Validate the parameters of a Trackback submission.
  */
-function _linkback_trackback_is_request_valid() {
+function _vinculum_trackback_is_request_valid() {
   $is_valid = $_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_REQUEST['url']);
   return $is_valid;
 }
@@ -143,7 +143,7 @@ function _linkback_trackback_is_request_valid() {
 /**
  * Build a trackback object with the parameters provided in the request.
  */
-function _linkback_trackback_build_trackback($nid) {
+function _vinculum_trackback_build_trackback($nid) {
   // Trackback requests should contain a number of parameters, provided as POST
   // variables.
   $trackback = new stdClass;

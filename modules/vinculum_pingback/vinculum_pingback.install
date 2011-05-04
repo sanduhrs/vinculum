@@ -1,18 +1,18 @@
 <?php
 /**
  * @file
- * Install, update and uninstall functions for the linkback-pingback module.
+ * Install, update and uninstall functions for the vinculum-pingback module.
  */
 
 
 /**
  * Implements hook_schema().
  */
-function linkback_pingback_schema() {
+function vinculum_pingback_schema() {
   $schema = array();
 
   // Record of each pingback received.
-  $schema['linkback_pingback_received'] = array(
+  $schema['vinculum_pingback_received'] = array(
     'description' => 'The pingbacks which have been received and accepted.',
     'fields' => array(
       'nid' => array(

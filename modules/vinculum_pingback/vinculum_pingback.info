@@ -1,7 +1,7 @@
-name = Linkback handler - Pingback
-description = Provides the Pingback protocol for the Linkback module.
-package = Linkback
+name = Vinculum handler - Pingback
+description = Provides the Pingback protocol for the Vinculum module.
+package = Vinculum
 core = 7.x
-dependencies[] = linkback
-files[] = linkback_pingback.module
-files[] = linkback_pingback.test
+dependencies[] = vinculum
+files[] = vinculum_pingback.module
+files[] = vinculum_pingback.test

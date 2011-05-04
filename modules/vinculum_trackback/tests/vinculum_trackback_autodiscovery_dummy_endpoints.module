@@ -8,10 +8,10 @@
 /**
  * Implements hook_menu().
  */
-function linkback_trackback_autodiscovery_dummy_endpoints_menu() {
+function vinculum_trackback_autodiscovery_dummy_endpoints_menu() {
   $items['trackback_dummy_endpoint'] = array(
     'title' => 'Dummy Trackback testing endpoint',
-    'page callback' => 'linkback_trackback_autodiscovery_dummy_endpoints_serve_page',
+    'page callback' => 'vinculum_trackback_autodiscovery_dummy_endpoints_serve_page',
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
@@ -21,7 +21,7 @@ function linkback_trackback_autodiscovery_dummy_endpoints_menu() {
 /**
  * Serve a page.
  */
-function linkback_trackback_autodiscovery_dummy_endpoints_serve_page($page) {
+function vinculum_trackback_autodiscovery_dummy_endpoints_serve_page($page) {
   drupal_set_message(t('Testing scenario: @page', array('@page' => $page)));
   // Scenarios:
   // 1. URL inaccessible (e.g. 404).

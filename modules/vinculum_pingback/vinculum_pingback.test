@@ -1,35 +1,35 @@
 <?php
 /**
  * @file
- * Tests for the linkback pingback module.
+ * Tests for the vinculum pingback module.
  */
 
 /**
  * Test that the list of handlers is loaded properly.
  */
-class LinkbackPingbackReceiveTestCase extends DrupalWebTestCase {
+class VinculumPingbackReceiveTestCase extends DrupalWebTestCase {
   protected $xmlrpc_url;
 
   public static function getInfo() {
     return array(
       'name' => 'Pingback: receiving pingbacks',
-      'description' => 'Test the pingback metadata is added to nodes which are enabled for receiving linkbacks, and that the receiving mechanism correctly stores pingbacks.',
-      'group' => 'Linkback',
+      'description' => 'Test the pingback metadata is added to nodes which are enabled for receiving vinculums, and that the receiving mechanism correctly stores pingbacks.',
+      'group' => 'Vinculum',
     );
   }
 
   function setUp() {
-    parent::setUp('linkback', 'linkback_pingback');
+    parent::setUp('vinculum', 'vinculum_pingback');
 
     $this->xmlrpc_url = $GLOBALS['base_url'] . '/xmlrpc.php';
 
-    // Create a content-type; enable it to receive linkbacks.
+    // Create a content-type; enable it to receive vinculums.
     $type_machine_name = 'dummy_contenttype1';
     $type = array(
       'type' => $type_machine_name,
-      'name' => st('Linkback dummy content-type 1'),
+      'name' => st('Vinculum dummy content-type 1'),
       'base' => 'node_content',
-      'description' => st("A dummy content-type, used for testing the Linkback Trackback module. This content-type should not be visible."),
+      'description' => st("A dummy content-type, used for testing the Vinculum Trackback module. This content-type should not be visible."),
       'custom' => 1,
       'modified' => 1,
       'locked' => 0,
@@ -38,22 +38,22 @@ class LinkbackPingbackReceiveTestCase extends DrupalWebTestCase {
     node_type_save($type);
     node_add_body_field($type);
 
-    // Enable linkback-receive for this content-type.
-    variable_set("linkback_send_{$type_machine_name}", FALSE);
-    variable_set("linkback_receive_{$type_machine_name}", TRUE);
+    // Enable vinculum-receive for this content-type.
+    variable_set("vinculum_send_{$type_machine_name}", FALSE);
+    variable_set("vinculum_receive_{$type_machine_name}", TRUE);
   }
 
 
   /**
    * Test that nodes correctly add the pingback <link> tag and HTTP header when
-   * configured to receive linkbacks.
+   * configured to receive vinculums.
    */
   function testPingbackMetadataAddedToNodes() {
 
     // Create a new node.
     $settings = array(
       'type' => 'dummy_contenttype1',
-      'title' => 'Example node used for testing the linkback pingback module.',
+      'title' => 'Example node used for testing the vinculum pingback module.',
       'body' => array(
         LANGUAGE_NONE => array(
           0 => array(
@@ -72,15 +72,15 @@ class LinkbackPingbackReceiveTestCase extends DrupalWebTestCase {
       ':rel' => 'pingback',
       ':href' => $this->xmlrpc_url,
     ));
-    $this->assertEqual(count($elements), 1, t('The Pingback <link> tag is added to nodes when linkbacks are enabled.'));
+    $this->assertEqual(count($elements), 1, t('The Pingback <link> tag is added to nodes when vinculums are enabled.'));
 
     $header = $this->drupalGetHeader('X-Pingback');
-    $this->assertEqual($header, $this->xmlrpc_url, t('The Pingback HTTP header is added to nodes when linkbacks are enabled.'));
+    $this->assertEqual($header, $this->xmlrpc_url, t('The Pingback HTTP header is added to nodes when vinculums are enabled.'));
 
 
-    // Re-configure the node to disable linkback-receive.
-    $node->linkback_receive = FALSE;
-    _linkback_node_save($node);
+    // Re-configure the node to disable vinculum-receive.
+    $node->vinculum_receive = FALSE;
+    _vinculum_node_save($node);
 
     $this->drupalGet("node/{$node->nid}");
 
@@ -88,10 +88,10 @@ class LinkbackPingbackReceiveTestCase extends DrupalWebTestCase {
       ':rel' => 'pingback',
       ':href' => $this->xmlrpc_url,
     ));
-    $this->assertEqual(count($elements), 0, t('The Pingback <link> tag is not added to nodes when linkbacks are disabled.'));
+    $this->assertEqual(count($elements), 0, t('The Pingback <link> tag is not added to nodes when vinculums are disabled.'));
 
     $header = $this->drupalGetHeader('X-Pingback');
-    $this->assertFalse($header, t('The Pingback HTTP header is not added to nodes when linkbacks are disabled.'));
+    $this->assertFalse($header, t('The Pingback HTTP header is not added to nodes when vinculums are disabled.'));
   }
 
 
@@ -103,7 +103,7 @@ class LinkbackPingbackReceiveTestCase extends DrupalWebTestCase {
     // Create a new node.
     $settings = array(
       'type' => 'dummy_contenttype1',
-      'title' => 'Example node used for testing the linkback trackback module.',
+      'title' => 'Example node used for testing the vinculum trackback module.',
       'body' => array(
         LANGUAGE_NONE => array(
           0 => array(
@@ -126,22 +126,22 @@ class LinkbackPingbackReceiveTestCase extends DrupalWebTestCase {
     // instance, not the actual site.
     xmlrpc($this->xmlrpc_url, $methods);
 
-    // Check that pingback and linkback records have been created.
-    $result = db_select('linkback_pingback_received', 'l')
+    // Check that pingback and vinculum records have been created.
+    $result = db_select('vinculum_pingback_received', 'l')
       ->fields('l')
       ->condition('l.nid', $node->nid)
       ->condition('l.url', 'http://example.com/foshizzles')
       ->execute()
       ->fetchAll();
-    $this->assertEqual(1, count($result), t('A pingback record has been saved to the linkback_pingback_received table.'));
+    $this->assertEqual(1, count($result), t('A pingback record has been saved to the vinculum_pingback_received table.'));
 
-    $result = db_select('node_linkback_received', 'l')
+    $result = db_select('node_vinculum_received', 'l')
       ->fields('l')
       ->condition('l.nid', $node->nid)
       ->condition('l.url', 'http://example.com/foshizzles')
       ->execute()
       ->fetchAll();
-    $this->assertEqual(1, count($result), t('A linkback record has been saved to the node_linkback_received table.'));
+    $this->assertEqual(1, count($result), t('A vinculum record has been saved to the node_vinculum_received table.'));
   }
 
 }

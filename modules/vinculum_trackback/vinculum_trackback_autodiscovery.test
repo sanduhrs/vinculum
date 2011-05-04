@@ -1,34 +1,34 @@
 <?php
 /**
  * @file
- * Tests for the linkback trackback auto-discovery process.
+ * Tests for the vinculum trackback auto-discovery process.
  */
 
 /**
  * Test the Send mechanism for trackbacks.
  */
-class LinkbackTrackbackAutodiscoveryTestCase extends DrupalWebTestCase {
+class VinculumTrackbackAutodiscoveryTestCase extends DrupalWebTestCase {
 
   public static function getInfo() {
     return array(
       'name' => 'Trackback auto-discovery',
       'description' => 'Test the trackback auto-discovery mechanism.',
-      'group' => 'Linkback',
+      'group' => 'Vinculum',
     );
   }
 
   function setUp() {
-    parent::setUp('linkback', 'linkback_trackback', 'linkback_trackback_autodiscovery');
+    parent::setUp('vinculum', 'vinculum_trackback', 'vinculum_trackback_autodiscovery');
 
     // @TODO: Test that auto-discovery functions with new nodes.
 
-    // // Create a content-type; enable it to send linkbacks.
+    // // Create a content-type; enable it to send vinculums.
     // $type_machine_name = 'dummy_contenttype1';
     // $type = array(
     //   'type' => $type_machine_name,
-    //   'name' => st('Linkback dummy content-type 1'),
+    //   'name' => st('Vinculum dummy content-type 1'),
     //   'base' => 'node_content',
-    //   'description' => st("A dummy content-type, used for testing the Linkback Trackback module. This content-type should not be visible."),
+    //   'description' => st("A dummy content-type, used for testing the Vinculum Trackback module. This content-type should not be visible."),
     //   'custom' => 1,
     //   'modified' => 1,
     //   'locked' => 0,
@@ -37,8 +37,8 @@ class LinkbackTrackbackAutodiscoveryTestCase extends DrupalWebTestCase {
     // node_type_save($type);
     // node_add_body_field($type);
     // 
-    // // Enable linkback-receive for this content-type.
-    // variable_set("linkback_send_{$type_machine_name}", TRUE);
+    // // Enable vinculum-receive for this content-type.
+    // variable_set("vinculum_send_{$type_machine_name}", TRUE);
 
     $this->refreshVariables();
   }
@@ -50,13 +50,13 @@ class LinkbackTrackbackAutodiscoveryTestCase extends DrupalWebTestCase {
   function testTrackbackEndpointAutodetection() {
     // The helper module provides a set of local end-points which provide a
     // variety of Trackback meta-data formats.
-    $result = module_enable(array('linkback_trackback_autodiscovery_dummy_endpoints'));
+    $result = module_enable(array('vinculum_trackback_autodiscovery_dummy_endpoints'));
     $this->assertEqual($result, TRUE, 'Trackback auto-discovery module was enabled.');
 
     // Reset cache after enabling the module.
     drupal_flush_all_caches();
 
-    // The linkback_trackback_dummy_endpoint module provides 8 pages which
+    // The vinculum_trackback_dummy_endpoint module provides 8 pages which
     // contain a variety of approaches to embedding Trackback RDF meta-data in
     // their pages (and some pages contain no Trackback auto-discovery meta-
     // data).
@@ -91,13 +91,13 @@ class LinkbackTrackbackAutodiscoveryTestCase extends DrupalWebTestCase {
                      '<hr />' . $debug->data .
                      '<hr />' . $out);
 
-      $result = linkback_trackback_autodiscovery_autodetect_trackback_support($url);
+      $result = vinculum_trackback_autodiscovery_autodetect_trackback_support($url);
       // Use assertIdentical to test for FALSE vs NULL.
       $this->assertIdentical($result, $expected_endpoint, t('Section @section: Endpoint correctly discovered for @url', array('@url' => $url, '@section' => $section)));
     }
 
     // Test a complex HTML page.
-    $testfile = dirname(__FILE__) . '/tests/linkback_trackback_autodiscovery.testdata.html';
+    $testfile = dirname(__FILE__) . '/tests/vinculum_trackback_autodiscovery.testdata.html';
     $html = file_get_contents($testfile);
     $this->verbose('Complex HTML source.' .
                    '<hr />' . str_replace("\n", "<br />\n", htmlentities($html)));
@@ -105,7 +105,7 @@ class LinkbackTrackbackAutodiscoveryTestCase extends DrupalWebTestCase {
     $url = 'http://www.movabletype.org/trackback/archives/000905.html';
     $endpoint = 'http://www.movabletype.org/mt/trackback/65';
     $expected_result = array($url => $endpoint);
-    $result = _linkback_trackback_autodiscovery_extract_endpoint_from_html($html);
+    $result = _vinculum_trackback_autodiscovery_extract_endpoint_from_html($html);
     $this->assertEqual($result, $expected_result, t('The correct endpoint %endpoint is extracted from complex HTML.', array('%endpoint' => $endpoint)));
   }
 }

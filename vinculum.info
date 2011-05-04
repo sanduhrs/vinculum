@@ -1,8 +1,8 @@
-name = Linkback
-description = Provides pingback and trackback support.
+name = Vinculum
+description = An API to provide support for linkback protocols such as pingback and trackback.
 core = 7.x
-package = Linkback
-files[] = linkback.module
-files[] = linkback.class.inc
-files[] = linkback.test
-configure = admin/config/content/linkback
+package = Vinculum
+files[] = vinculum.module
+files[] = vinculum.class.inc
+files[] = vinculum.test
+configure = admin/config/content/vinculum

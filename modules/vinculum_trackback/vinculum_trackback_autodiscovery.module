@@ -5,9 +5,9 @@
  */
 
 /**
- * Implements hook_linkback_handler().
+ * Implements hook_vinculum_handler().
  */
-function linkback_trackback_autodiscovery_linkback_handler() {
+function vinculum_trackback_autodiscovery_vinculum_handler() {
   return array(
     'protocol' => t('Trackback auto-discovery'),
   );
@@ -15,13 +15,13 @@ function linkback_trackback_autodiscovery_linkback_handler() {
 
 
 /**
- * Implements hook_linkback_send().
+ * Implements hook_vinculum_send().
  *
  * Attempt to send a trackback to an external site.
  */
-function linkback_trackback_autodiscovery_linkback_send($target, $source, $node) {
+function vinculum_trackback_autodiscovery_vinculum_send($target, $source, $node) {
   // Use auto-discovery to check that the external URL supports trackback.
-  if ($trackback_endpoint_url = linkback_trackback_autodiscovery_autodetect_trackback_support($target)) {
+  if ($trackback_endpoint_url = vinculum_trackback_autodiscovery_autodetect_trackback_support($target)) {
     $params = array(
       'url' => url("node/{$node->nid}", array('absolute' => TRUE)), 
       'title' => $node->title,
@@ -34,7 +34,7 @@ function linkback_trackback_autodiscovery_linkback_send($target, $source, $node)
     drupal_alter('trackback_send_params', $params);
 
     // Attempt to send the trackback.
-    $result = linkback_trackback_send_trackback($trackback_endpoint_url, $params);
+    $result = vinculum_trackback_send_trackback($trackback_endpoint_url, $params);
 
     return $result;
   }
@@ -51,10 +51,10 @@ function linkback_trackback_autodiscovery_linkback_send($target, $source, $node)
  * FALSE: The URL was successfully reached, and trackbacks are not suppported.
  * NULL: The URL could not be successfully requested.
  */
-function linkback_trackback_autodiscovery_autodetect_trackback_support($url) {
+function vinculum_trackback_autodiscovery_autodetect_trackback_support($url) {
   // Efficiency-check: check the mime-type for potential Trackback support
   // before using a full GET request.
-  if (!($result = linkback_trackback_autodiscovery_autodetect_trackback_support_efficiency_check_passes($url))) {
+  if (!($result = vinculum_trackback_autodiscovery_autodetect_trackback_support_efficiency_check_passes($url))) {
     return $result;
   }
 
@@ -70,7 +70,7 @@ function linkback_trackback_autodiscovery_autodetect_trackback_support($url) {
   // Request the third-party URL.
   $options = array(
     'headers' => array(
-      'User-Agent' => LINKBACK_TRACKBACK_UA,
+      'User-Agent' => VINCULUM_TRACKBACK_UA,
     ),
   );
   $result = drupal_http_request($url, $options);
@@ -82,7 +82,7 @@ function linkback_trackback_autodiscovery_autodetect_trackback_support($url) {
   }
 
   // Test for Trackback endpoint RDF metadata within the page.
-  $endpoints = _linkback_trackback_autodiscovery_extract_endpoint_from_html($result->data);
+  $endpoints = _vinculum_trackback_autodiscovery_extract_endpoint_from_html($result->data);
 
   // Pages might list multiple endpoints: use the endpoint whose identifier
   // matches the URL provided.
@@ -103,22 +103,22 @@ function linkback_trackback_autodiscovery_autodetect_trackback_support($url) {
 /**
  * Efficiency check.
  */
-function linkback_trackback_autodiscovery_autodetect_trackback_support_efficiency_check_passes($url) {
+function vinculum_trackback_autodiscovery_autodetect_trackback_support_efficiency_check_passes($url) {
   // Efficient-mode (the default) uses a HTTP HEAD request to check whether the
   // content *might* support the Trackback protocol, by checking the mime-type.
   // Images/media are frequently linked by nodes, but these URLs would not
   // support Trackback.
 
   // This check can be bypassed by setting the variable
-  // 'linkback_trackback_autodiscovery_inefficient_mode' to TRUE.
+  // 'vinculum_trackback_autodiscovery_inefficient_mode' to TRUE.
   // This is "inefficient-mode".
-  $skip_test = variable_get('linkback_trackback_autodiscovery_inefficient_mode', FALSE);
+  $skip_test = variable_get('vinculum_trackback_autodiscovery_inefficient_mode', FALSE);
   if ($skip_test) {
     return TRUE;
   }
 
   // Efficient-mode is active here.  Attempt to check the URL efficiently.
-  $discoverable = _linkback_trackback_autodiscovery_check_url_provides_parsable_content($url);
+  $discoverable = _vinculum_trackback_autodiscovery_check_url_provides_parsable_content($url);
 
   // Possible return values from the helper:
   // - TRUE:  the content *might* support Trackbacks.
@@ -152,11 +152,11 @@ function linkback_trackback_autodiscovery_autodetect_trackback_support_efficienc
  *   discovery.
  * - NULL if the URL could not be reached (for example, due to a 404 error).
  */
-function _linkback_trackback_autodiscovery_check_url_provides_parsable_content($url) {
+function _vinculum_trackback_autodiscovery_check_url_provides_parsable_content($url) {
   $options = array(
     'method' => 'HEAD',
     'headers' => array(
-      'User-Agent' => LINKBACK_TRACKBACK_UA,
+      'User-Agent' => VINCULUM_TRACKBACK_UA,
     ),
   );
   $result = drupal_http_request($url, $options);
@@ -187,7 +187,7 @@ function _linkback_trackback_autodiscovery_check_url_provides_parsable_content($
  *   If no Trackback endpoints are discovered, an empty array will be returned.
  *   If the html cannot be parsed, NULL is returned.
  */
-function _linkback_trackback_autodiscovery_extract_endpoint_from_html($html) {
+function _vinculum_trackback_autodiscovery_extract_endpoint_from_html($html) {
   $matches = array();
 
   // Sample RDF:
@@ -205,10 +205,10 @@ function _linkback_trackback_autodiscovery_extract_endpoint_from_html($html) {
 
   // If RDF tags are wrapped in comment tags, remove the comment tags so the
   // RDF tags can be parsed by SimpleXML
-  $html = trim(_linkback_trackback_autodiscovery_strip_comment_tags($html));
+  $html = trim(_vinculum_trackback_autodiscovery_strip_comment_tags($html));
 
   $result = @simplexml_load_string($html) or
-  $result = @simplexml_load_string(_linkback_trackback_autodiscovery_cleanup_html($html));
+  $result = @simplexml_load_string(_vinculum_trackback_autodiscovery_cleanup_html($html));
   if ($result === FALSE) {
     // If the html can't be loaded by simplexml, abort.
     return NULL;
@@ -222,7 +222,7 @@ function _linkback_trackback_autodiscovery_extract_endpoint_from_html($html) {
   // conflicting prefix, but cannot be accessed through registering the pre-
   // existing namespace prefix to the correct namespace. WTF is an appropriate
   // response to this explanation!)
-  list($p1, $p2, $p3) = _linkback_trackback_autodiscovery_generate_unique_prefixes($result->getNamespaces(TRUE));
+  list($p1, $p2, $p3) = _vinculum_trackback_autodiscovery_generate_unique_prefixes($result->getNamespaces(TRUE));
 
   $result->registerXPathNamespace($p1, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
   $result->registerXPathNamespace($p2, 'http://purl.org/dc/elements/1.1/');
@@ -242,7 +242,7 @@ function _linkback_trackback_autodiscovery_extract_endpoint_from_html($html) {
 /**
  * Attempt to clean HTML to allow SimpleXML to load the HTML.
  */
-function _linkback_trackback_autodiscovery_cleanup_html($html) {
+function _vinculum_trackback_autodiscovery_cleanup_html($html) {
   // Strip everything except the RDF tags.
   $pattern = '#<rdf:RDF (?:.*?)</rdf:RDF>#ms';
   if (preg_match($pattern, $html, $matches)) {
@@ -259,7 +259,7 @@ function _linkback_trackback_autodiscovery_cleanup_html($html) {
 /**
  * Where RDF tags are wrapped by comment tags, remove the comment tags.
  */
-function _linkback_trackback_autodiscovery_strip_comment_tags($html) {
+function _vinculum_trackback_autodiscovery_strip_comment_tags($html) {
   // If RDF tags are found within a comment section, strip out the comment tags
   // so the RDF can be parsed via SimpleXml.
 
@@ -267,7 +267,7 @@ function _linkback_trackback_autodiscovery_strip_comment_tags($html) {
   // The /m modifier indicates multi-line matching, and /s allows the dot [.]
   //   character to include \n (the new-line character).
   // The ? character (in .*?) indicated non-greedy matching.
-  $html = preg_replace_callback('/<!--(.*?)-->/ms', "_linkback_trackback_autodiscovery_strip_comment_tags_helper", $html);
+  $html = preg_replace_callback('/<!--(.*?)-->/ms', "_vinculum_trackback_autodiscovery_strip_comment_tags_helper", $html);
   return $html;
 }
 
@@ -275,7 +275,7 @@ function _linkback_trackback_autodiscovery_strip_comment_tags($html) {
  * Helper function to check for RDF tags within a HTML comment, and strip the
  * comment tag if they're present.  Used with preg_replace_callback().
  */
-function _linkback_trackback_autodiscovery_strip_comment_tags_helper($matches) {
+function _vinculum_trackback_autodiscovery_strip_comment_tags_helper($matches) {
   $comment_text = $matches[1];
   if (preg_match('#<([^:]*:)?RDF\s#ms', $comment_text)) {
     return $comment_text;
@@ -293,7 +293,7 @@ function _linkback_trackback_autodiscovery_strip_comment_tags_helper($matches) {
  * @return Array
  *   An array of 3 unique 5-character namespace prefixes.
  */
-function _linkback_trackback_autodiscovery_generate_unique_prefixes($namespaces) {
+function _vinculum_trackback_autodiscovery_generate_unique_prefixes($namespaces) {
   // Each new prefix will be a random 5-character string using lower-case
   // alphabetic characters.
   $character_set = 'abcdefghijklmnopqrstuvwxyz';

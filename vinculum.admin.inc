@@ -1,32 +1,32 @@
 <?php
 /**
  * @file
- * Admin pages for the linkback module.
+ * Admin pages for the vinculum module.
  */
 
 /**
- * Menu callback for admin/config/content/linkback.
+ * Menu callback for admin/config/content/vinculum.
  *
  * Allows the handlers to be prioritised.
  */
-function linkback_settings_form($form) {
+function vinculum_settings_form($form) {
 
-  $form['linkback_validate_remote_pages'] = array(
+  $form['vinculum_validate_remote_pages'] = array(
     '#type' => 'checkbox',
     '#title' => t('Validate remote pages'),
-    '#description' => t('When linkbacks are received, check that the remote URL is reachable and contains a link to the referenced node.'),
-    '#default_value' => variable_get('linkback_validate_remote_pages', FALSE),
+    '#description' => t('When vinculums are received, check that the remote URL is reachable and contains a link to the referenced node.'),
+    '#default_value' => variable_get('vinculum_validate_remote_pages', FALSE),
   );
 
 
   // Fetch a list of the available handlers (and reset the cache to ensure it's
   // always current on this page).
   // Handlers are listed by module-weight.
-  $handlers = linkback_load_all_handlers(TRUE);
+  $handlers = vinculum_load_all_handlers(TRUE);
 
   $form['handlers'] = array(
     '#tree' => TRUE,
-    '#theme' => 'linkback_settings_handlers_form_element',
+    '#theme' => 'vinculum_settings_handlers_form_element',
     '#handlers' => $handlers,
   );
   foreach ($handlers as $handler) {
@@ -35,7 +35,7 @@ function linkback_settings_form($form) {
       '#title' => check_plain($handler->protocol),
       '#default_value' => $handler->weight,
       '#attributes' => array(
-        'class' => array('linkback-handler-weight'),
+        'class' => array('vinculum-handler-weight'),
       ),
     );
   }
@@ -51,17 +51,17 @@ function linkback_settings_form($form) {
 /**
  * Submit handler for the configuration form.
  */
-function linkback_settings_form_submit(&$form, &$form_state) {
+function vinculum_settings_form_submit(&$form, &$form_state) {
   $weights = $form_state['values']['handlers'];
-  linkback_set_weights($weights);
+  vinculum_set_weights($weights);
   drupal_set_message(t('Your settings have been saved.'));
 }
 
 /**
- * Theme handler for the list of handlers on the linkback configuration form.
+ * Theme handler for the list of handlers on the vinculum configuration form.
  * This transforms the list of handlers into a draggable table.
  */
-function theme_linkback_settings_handlers_form_element($variables) {
+function theme_vinculum_settings_handlers_form_element($variables) {
   $form = $variables['form'];
 
   // Form the handlers into a table.
@@ -83,18 +83,18 @@ function theme_linkback_settings_handlers_form_element($variables) {
   }
 
   $output = '';
-  $output .= theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'linkback-table')));
+  $output .= theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'vinculum-table')));
   $output .= drupal_render_children($form);
-  drupal_add_tabledrag('linkback-table', 'order', 'sibling', 'linkback-handler-weight');
+  drupal_add_tabledrag('vinculum-table', 'order', 'sibling', 'vinculum-handler-weight');
 
   return $output;
 }
 
 
 /**
- * Report of all linkbacks sent.
+ * Report of all vinculums sent.
  */
-function linkback_report_sent() {
+function vinculum_report_sent() {
   $header = array(
     array('data' => t('Date'),       'field' => 'timestamp',  'sort' => 'desc'),
     array('data' => t('From'),       'field' => 'n.title'),
@@ -103,7 +103,7 @@ function linkback_report_sent() {
   );
 
 
-  $query = db_select('node_linkback_sent', 'l');
+  $query = db_select('node_vinculum_sent', 'l');
   $query->join('node', 'n', 'n.nid = l.nid');
   $query->extend('PagerDefault')
     ->limit(1)
@@ -114,7 +114,7 @@ function linkback_report_sent() {
 
   $results = $query->execute();
 
-  $handlers = linkback_get_handler();
+  $handlers = vinculum_get_handler();
 
   $rows = array();
   foreach ($results as $result) {
@@ -134,9 +134,9 @@ function linkback_report_sent() {
 
 
 /**
- * Report of all linkbacks received.
+ * Report of all vinculums received.
  */
-function linkback_report_received() {
+function vinculum_report_received() {
   $header = array(
     array('data' => t('Date'),       'field' => 'timestamp',  'sort' => 'desc'),
     array('data' => t('Content'),    'field' => 'n.title'),
@@ -145,7 +145,7 @@ function linkback_report_received() {
   );
 
 
-  $query = db_select('node_linkback_received', 'l');
+  $query = db_select('node_vinculum_received', 'l');
   $query->join('node', 'n', 'n.nid = l.nid');
   $query->extend('PagerDefault')
     ->limit(1)
@@ -156,7 +156,7 @@ function linkback_report_received() {
 
   $results = $query->execute();
 
-  $handlers = linkback_get_handler();
+  $handlers = vinculum_get_handler();
 
   $rows = array();
   foreach ($results as $result) {

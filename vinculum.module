@@ -1,47 +1,47 @@
 <?php
 /**
  * @file
- * Provide an API for linkback-handlers to support linkback-registration on
- * nodes.  At least one linkback-handler (such as Pingback or Trackback) should
+ * Provide an API for vinculum-handlers to support vinculum-registration on
+ * nodes.  At least one vinculum-handler (such as Pingback or Trackback) should
  * be enabled.
  */
 
 
 /**
- * @defgroup linkback_validation_error_codes Linkback error codes.
+ * @defgroup vinculum_validation_error_codes Vinculum error codes.
  * @{
  * Numeric error codes used to report errors when recording the receipt of a
- * linkback.
+ * vinculum.
  * @}
  */
 
 /**
- * @addtogroup linkback_validation_error_codes
+ * @addtogroup vinculum_validation_error_codes
  * @{
  */
 
-// Zero means the linkback is valid.
-define('LINKBACK_VALIDATES', 0);
+// Zero means the vinculum is valid.
+define('VINCULUM_VALIDATES', 0);
 
 // The local node could not be found.
-define('LINKBACK_ERROR_LOCAL_NODE_NOT_FOUND', 1);
+define('VINCULUM_ERROR_LOCAL_NODE_NOT_FOUND', 1);
 
-// The local node could not be used as a linkback resource (e.g. linkbacks are
+// The local node could not be used as a vinculum resource (e.g. vinculums are
 // disabled on the node).
-define('LINKBACK_ERROR_LOCAL_NODE_LINKBACK_NOT_ALLOWED', 2);
+define('VINCULUM_ERROR_LOCAL_NODE_VINCULUM_NOT_ALLOWED', 2);
 
 // The pingback has previously been registered.
-define('LINKBACK_ERROR_LINKBACK_ALREADY_REGISTERED', 3);
+define('VINCULUM_ERROR_VINCULUM_ALREADY_REGISTERED', 3);
 
 // The URL of the remote site could not be reached.
-define('LINKBACK_ERROR_REMOTE_URL_NOT_FOUND', 4);
+define('VINCULUM_ERROR_REMOTE_URL_NOT_FOUND', 4);
 
 // The response from the remote resource does not contain a link to this site.
-define('LINKBACK_ERROR_REMOTE_URL_MISSING_LINK', 5);
+define('VINCULUM_ERROR_REMOTE_URL_MISSING_LINK', 5);
 
 
 /**
- * @} End of "addtogroup linkback_validation_error_codes".
+ * @} End of "addtogroup vinculum_validation_error_codes".
  */
 
 /**********************************************************
@@ -51,23 +51,23 @@ define('LINKBACK_ERROR_REMOTE_URL_MISSING_LINK', 5);
 /**
  * Implements hook_help().
  */
-function linkback_help($path, $arg) {
+function vinculum_help($path, $arg) {
   // Explain:
-  // - Linkback protocol
+  // - Vinculum protocol
   // - Trackback protocol
   // Send vs Receive
   // Adding as comments/entities...
   // Moderation (Mollom integration?)
 
   switch ($path) {
-    // Main help for the Linkback module.
-    case 'admin/help#linkback':
+    // Main help for the Vinculum module.
+    case 'admin/help#vinculum':
       break;
 
     // The configuration page.
-    case 'admin/config/content/linkback':
+    case 'admin/config/content/vinculum':
       $output = '';
-      $output .= '<p>' . t('The linkback handlers are prioritised by module-weight.') . '</p>';
+      $output .= '<p>' . t('The vinculum handlers are prioritised by module-weight.') . '</p>';
       return $output;
   }
 }
@@ -75,20 +75,20 @@ function linkback_help($path, $arg) {
 /**
  * Implements hook_permission().
  */
-function linkback_permission() {
+function vinculum_permission() {
   $perms = array();
   // This permission controls access to the admin-settings page, and
-  // automatically grants access to configure linkback settings on any node-
+  // automatically grants access to configure vinculum settings on any node-
   // type that the user has permission to edit.
-  $perms['configure linkback settings'] = array(
-    'title' => t('Administer linkback settings'),
+  $perms['configure vinculum settings'] = array(
+    'title' => t('Administer vinculum settings'),
   );
-  $perms['view linkback reports'] = array(
-    'title' => t('View linkback reports'),
+  $perms['view vinculum reports'] = array(
+    'title' => t('View vinculum reports'),
   );
 
   foreach (node_permissions_get_configured_types() as $type) {
-    $perms += _linkback_list_permissions($type);
+    $perms += _vinculum_list_permissions($type);
   }
   return $perms;
 }
@@ -96,11 +96,11 @@ function linkback_permission() {
 /**
  * Implements hook_theme().
  */
-function linkback_theme() {
+function vinculum_theme() {
   return array(
-    'linkback_settings_handlers_form_element' => array(
+    'vinculum_settings_handlers_form_element' => array(
       'render element' => 'form',
-      'file' => 'linkback.admin.inc',
+      'file' => 'vinculum.admin.inc',
     ),
   );
 }
@@ -108,35 +108,35 @@ function linkback_theme() {
 /**
  * Implements hook_menu().
  */
-function linkback_menu() {
+function vinculum_menu() {
   // Configuration page.
-  $items['admin/config/content/linkback'] = array(
-    'title' => 'Linkback',
+  $items['admin/config/content/vinculum'] = array(
+    'title' => 'Vinculum',
     'description' => 'Configure trackbacks and pingbacks.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('linkback_settings_form'),
-    'access arguments' => array('configure linkback settings'),
-    'file' => 'linkback.admin.inc',
+    'page arguments' => array('vinculum_settings_form'),
+    'access arguments' => array('configure vinculum settings'),
+    'file' => 'vinculum.admin.inc',
   );
 
   // Reporting.
-  $items['admin/reports/linkback'] = array(
-    'title' => 'Linkback',
-    'description' => 'List linkbacks sent and received.',
-    'page callback' => 'linkback_report_sent',
-    'access arguments' => array('view linkback reports'),
-    'file' => 'linkback.admin.inc',
+  $items['admin/reports/vinculum'] = array(
+    'title' => 'Vinculum',
+    'description' => 'List vinculums sent and received.',
+    'page callback' => 'vinculum_report_sent',
+    'access arguments' => array('view vinculum reports'),
+    'file' => 'vinculum.admin.inc',
   );
-  $items['admin/reports/linkback/sent'] = array(
+  $items['admin/reports/vinculum/sent'] = array(
     'title' => 'Sent',
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
   );
-  $items['admin/reports/linkback/received'] = array(
+  $items['admin/reports/vinculum/received'] = array(
     'title' => 'Received',
-    'page callback' => 'linkback_report_received',
-    'access arguments' => array('view linkback reports'),
-    'file' => 'linkback.admin.inc',
+    'page callback' => 'vinculum_report_received',
+    'access arguments' => array('view vinculum reports'),
+    'file' => 'vinculum.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
 
@@ -146,78 +146,78 @@ function linkback_menu() {
 /**
  * Implements hook_form_FORM_ID_alter().
  *
- * Configure which content-types can send/receive linkbacks.
+ * Configure which content-types can send/receive vinculums.
  */
-function linkback_form_node_type_form_alter(&$form, &$form_state) {
+function vinculum_form_node_type_form_alter(&$form, &$form_state) {
   $type = $form['#node_type'];
 
-  // The JS adds an appropriate description to the vertical-tab for Linkbacks
+  // The JS adds an appropriate description to the vertical-tab for Vinculums
   // based on the chosen settings.
-  $form['additional_settings']['#attached']['js'][] = drupal_get_path('module', 'linkback') . '/linkback_content_types.js';
+  $form['additional_settings']['#attached']['js'][] = drupal_get_path('module', 'vinculum') . '/vinculum_content_types.js';
 
-  $form['linkback'] = array(
+  $form['vinculum'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Linkbacks'),
+    '#title' => t('Vinculums'),
     '#description' => t('Default settings for new content:'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
     '#group' => 'additional_settings',
   );
-  $form['linkback']['linkback_receive'] = array(
+  $form['vinculum']['vinculum_receive'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Receive linkbacks'),
-    '#description' => t('Allow %type nodes to receive linkbacks from third party sites.', array('%type' => $type->name)),
-    '#default_value' => variable_get("linkback_receive_{$type->type}", TRUE),
+    '#title' => t('Receive vinculums'),
+    '#description' => t('Allow %type nodes to receive vinculums from third party sites.', array('%type' => $type->name)),
+    '#default_value' => variable_get("vinculum_receive_{$type->type}", TRUE),
   );
-  $form['linkback']['linkback_send'] = array(
+  $form['vinculum']['vinculum_send'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Send linkbacks'),
-    '#description' => t('Allow %type nodes to send linkbacks to third party sites when the node is created or changed.', array('%type' => $type->name)),
-    '#default_value' => variable_get("linkback_send_{$type->type}", TRUE),
+    '#title' => t('Send vinculums'),
+    '#description' => t('Allow %type nodes to send vinculums to third party sites when the node is created or changed.', array('%type' => $type->name)),
+    '#default_value' => variable_get("vinculum_send_{$type->type}", TRUE),
   );
 }
 
 /**
  * Implements hook_form_alter().
  */
-function linkback_form_alter(&$form, $form_state, $form_id) {
+function vinculum_form_alter(&$form, $form_state, $form_id) {
 
   // Add 'send' and 'receive' controls to node/add and node/nnn/edit forms.
   if (strpos($form_id, '_node_form') && isset($form['#node'])) {
     $node = $form['#node'];
     $node_type = $form['#node']->type;
 
-    // Get the configured linkback settings for this node (if already set), or
+    // Get the configured vinculum settings for this node (if already set), or
     // the defaults for the node's content-type.
     $settings = (object) array(
-      'send'    => isset($node->linkback_send)    ? $node->linkback_send    : variable_get("linkback_send_{$node_type}", TRUE),
-      'receive' => isset($node->linkback_receive) ? $node->linkback_receive : variable_get("linkback_receive_{$node_type}", TRUE),
+      'send'    => isset($node->vinculum_send)    ? $node->vinculum_send    : variable_get("vinculum_send_{$node_type}", TRUE),
+      'receive' => isset($node->vinculum_receive) ? $node->vinculum_receive : variable_get("vinculum_receive_{$node_type}", TRUE),
     );
 
-    // Users may control whether linkbacks (send / receive) are enabled for a
+    // Users may control whether vinculums (send / receive) are enabled for a
     // given node if they have permission for that node-type, or a global admin
     // permission.
-    $access = user_access("configure {$node_type} linkbacks") || user_access('administer content types') || user_access('configure linkback settings');
+    $access = user_access("configure {$node_type} vinculums") || user_access('administer content types') || user_access('configure vinculum settings');
 
     // The JS handles the vertical-tabs text.
-    $form['additional_settings']['#attached']['js'][] = drupal_get_path('module', 'linkback') . '/linkback_content_types.js';
+    $form['additional_settings']['#attached']['js'][] = drupal_get_path('module', 'vinculum') . '/vinculum_content_types.js';
 
-    $form['linkback'] = array(
+    $form['vinculum'] = array(
       '#type' => 'fieldset',
-      '#title' => t('Linkbacks'),
+      '#title' => t('Vinculums'),
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
       '#group' => 'additional_settings',
       '#access' => $access,
     );
-    $form['linkback']['linkback_receive'] = array(
+    $form['vinculum']['vinculum_receive'] = array(
       '#type' => 'checkbox',
-      '#title' => t('Receive linkbacks'),
+      '#title' => t('Receive vinculums'),
       '#default_value' => $settings->receive,
     );
-    $form['linkback']['linkback_send'] = array(
+    $form['vinculum']['vinculum_send'] = array(
       '#type' => 'checkbox',
-      '#title' => t('Send linkbacks'),
+      '#title' => t('Send vinculums'),
       '#default_value' => $settings->send,
     );
   }
@@ -226,26 +226,26 @@ function linkback_form_alter(&$form, $form_state, $form_id) {
 /**
  * Implements hook_node_load().
  *
- * When a node is loaded, add the 'send' and 'receive' linkback attributes to
+ * When a node is loaded, add the 'send' and 'receive' vinculum attributes to
  * the node object.
  */
-function linkback_node_load($nodes, $types) {
+function vinculum_node_load($nodes, $types) {
   $nids = array_keys($nodes);
 
-  // Load the linkback settings for these nodes.
-  $linkback_node_settings = _linkback_node_get_settings($nids);
+  // Load the vinculum settings for these nodes.
+  $vinculum_node_settings = _vinculum_node_get_settings($nids);
 
   foreach ($nids as $nid) {
     // If this node has already been configured, use the node's settings.
-    if (array_key_exists($nid, $linkback_node_settings)) {
-      $nodes[$nid]->linkback_send    = $linkback_node_settings[$nid]->send;
-      $nodes[$nid]->linkback_receive = $linkback_node_settings[$nid]->receive;
+    if (array_key_exists($nid, $vinculum_node_settings)) {
+      $nodes[$nid]->vinculum_send    = $vinculum_node_settings[$nid]->send;
+      $nodes[$nid]->vinculum_receive = $vinculum_node_settings[$nid]->receive;
     }
     // Fallback to defaults.
     else {
       $node_type = $nodes[$nid]->type;
-      $nodes[$nid]->linkback_send    = variable_get("linkback_send_{$node_type}", TRUE);
-      $nodes[$nid]->linkback_receive = variable_get("linkback_receive_{$node_type}", TRUE);
+      $nodes[$nid]->vinculum_send    = variable_get("vinculum_send_{$node_type}", TRUE);
+      $nodes[$nid]->vinculum_receive = variable_get("vinculum_receive_{$node_type}", TRUE);
     }
   }
 }
@@ -253,38 +253,38 @@ function linkback_node_load($nodes, $types) {
 /**
  * Implements hook_node_insert().
  */
-function linkback_node_insert($node) {
-  _linkback_node_save($node);
+function vinculum_node_insert($node) {
+  _vinculum_node_save($node);
 }
 
 /**
  * Implements hook_node_update().
  */
-function linkback_node_update($node) {
-  _linkback_node_save($node);
+function vinculum_node_update($node) {
+  _vinculum_node_save($node);
 }
 
 
 
 /**
- * Implements hook_linkback_get_external_links().
+ * Implements hook_vinculum_get_external_links().
  * Gets all the URLs found in the body field of a node.
  *
  * @return Array
  * A list of external links found within the BODY field.
  */
-function linkback_linkback_get_external_links($node) {
-  $text = _linkback_extract_text($node);
-  return _linkback_extract_urls($text);
+function vinculum_vinculum_get_external_links($node) {
+  $text = _vinculum_extract_text($node);
+  return _vinculum_extract_urls($text);
 }
 
 /**
- * Implements hook_linkback_link_send_alter().
+ * Implements hook_vinculum_link_send_alter().
  *
  * Hook function provided on behalf of core's path functionality to support
  * URL aliases for nodes.
  */
-function linkback_linkback_link_send_alter(&$links, $node) {
+function vinculum_vinculum_link_send_alter(&$links, $node) {
   foreach ($links as $key => $record) {
     $language = (isset($node->language)) ? $node->language : LANGUAGE_NONE;
     if ($url = drupal_lookup_path('alias', $record->source, $language)) {
@@ -300,137 +300,137 @@ function linkback_linkback_link_send_alter(&$links, $node) {
  *********************************************************/
 
 /**
- * Register the receipt of a linkback.
+ * Register the receipt of a vinculum.
  *
- * If the linkback has not been validated, this function will call the
+ * If the vinculum has not been validated, this function will call the
  * validation handlers.
- * This function will trigger linkback actions (such as add-comment) when a
- * linkback has been successfully validated.
+ * This function will trigger vinculum actions (such as add-comment) when a
+ * vinculum has been successfully validated.
  *
- * @param Object $linkback A linkback object.
+ * @param Object $vinculum A vinculum object.
  *
  * @return Int
- * 0 is returned if the linkback was successfully added.
- * A positive numeric error-code is returned if the linkback was declined (e.g.
- * the linkback already exists, or an anti-spam module prevented the pingback,
+ * 0 is returned if the vinculum was successfully added.
+ * A positive numeric error-code is returned if the vinculum was declined (e.g.
+ * the vinculum already exists, or an anti-spam module prevented the pingback,
  * etc).
  *
- * @see linkback_validation_error_codes
+ * @see vinculum_validation_error_codes
  */
-function linkback_receive(linkback $linkback) {
+function vinculum_receive(vinculum $vinculum) {
 
-  // Validate the linkback request, if it's not already validated.
-  if (empty($linkback->validated)) {
-    $validation_result = linkback_receive_validate($linkback);
+  // Validate the vinculum request, if it's not already validated.
+  if (empty($vinculum->validated)) {
+    $validation_result = vinculum_receive_validate($vinculum);
 
     // If it's invalid, abort here.
-    if (!$validation_result == LINKBACK_VALIDATES) {
+    if (!$validation_result == VINCULUM_VALIDATES) {
       return $validation_result;
     }
   }
 
-  // Write an entry in the linkback tracker table.
-  db_merge('node_linkback_received')
+  // Write an entry in the vinculum tracker table.
+  db_merge('node_vinculum_received')
     ->key(array(
-      'nid' => $linkback->nid,
-      'url' => $linkback->url,
+      'nid' => $vinculum->nid,
+      'url' => $vinculum->url,
       ))
     ->fields(array(
-      'handler'   => $linkback->handler,
-      'origin_ip' => $linkback->origin_ip,
-      'timestamp' => $linkback->timestamp,
+      'handler'   => $vinculum->handler,
+      'origin_ip' => $vinculum->origin_ip,
+      'timestamp' => $vinculum->timestamp,
     ))
     ->execute();
 
-  // Fire hook_linkback_received_action().
+  // Fire hook_vinculum_received_action().
   // Actions are implemented through:
-  // - linkback_trigger - supports the core trigger module.
-  // - linkback_rules - integrates with the rules module.
-  module_invoke_all('linkback_received_action', $linkback);
+  // - vinculum_trigger - supports the core trigger module.
+  // - vinculum_rules - integrates with the rules module.
+  module_invoke_all('vinculum_received_action', $vinculum);
 
 }
 
 
 /**
- * Validate the receipt of a linkback.
+ * Validate the receipt of a vinculum.
  *
- * @param Object $linkback A linkback object.
+ * @param Object $vinculum A vinculum object.
  *
  * @return Int
- * 0 is returned if the linkback validates.
- * A positive numeric error-code is returned if the linkback validation fails
- * (e.g. the linkback already exists, or an anti-spam module prevented the
+ * 0 is returned if the vinculum validates.
+ * A positive numeric error-code is returned if the vinculum validation fails
+ * (e.g. the vinculum already exists, or an anti-spam module prevented the
  * pingback, etc).
  *
- * @see linkback_validation_error_codes
+ * @see vinculum_validation_error_codes
  */
-function linkback_receive_validate(linkback $linkback) {
+function vinculum_receive_validate(vinculum $vinculum) {
   // Validate that the node accepts pingbacks.
-  $node = node_load($linkback->nid);
+  $node = node_load($vinculum->nid);
   if (!$node) {
-    return LINKBACK_ERROR_LOCAL_NODE_NOT_FOUND;
+    return VINCULUM_ERROR_LOCAL_NODE_NOT_FOUND;
   }
-  // Check that the node permits linkbacks.
-  elseif (!linkback_node_allows_linkback($node, 'receive')) {
-    return LINKBACK_ERROR_LOCAL_NODE_LINKBACK_NOT_ALLOWED;
+  // Check that the node permits vinculums.
+  elseif (!vinculum_node_allows_vinculum($node, 'receive')) {
+    return VINCULUM_ERROR_LOCAL_NODE_VINCULUM_NOT_ALLOWED;
   }
-  // Check that the linkback isn't already registered.
-  elseif (linkback_is_received($linkback->nid, $linkback->url)) {
-    return LINKBACK_ERROR_LINKBACK_ALREADY_REGISTERED;
+  // Check that the vinculum isn't already registered.
+  elseif (vinculum_is_received($vinculum->nid, $vinculum->url)) {
+    return VINCULUM_ERROR_VINCULUM_ALREADY_REGISTERED;
   }
 
   // Optional validation:
   // Validate that the remote URL is reachable and links to the referenced
   // node.
-  if (variable_get('linkback_validate_remote_pages', FALSE)) {
+  if (variable_get('vinculum_validate_remote_pages', FALSE)) {
     // Validate that the remote node is reachable.
-    $result = drupal_http_request($linkback->url);
+    $result = drupal_http_request($vinculum->url);
 
     // Treat all HTTP errors (inc Forbidden) as remote URL not found.
     if ($result->error) {
-      return LINKBACK_ERROR_REMOTE_URL_NOT_FOUND;
+      return VINCULUM_ERROR_REMOTE_URL_NOT_FOUND;
     }
 
     // Check the content for a link to the local node.
     $content = $result->data;
     // Extract all the URLs from the page content.
-    $urls = _linkback_extract_urls($content);
+    $urls = _vinculum_extract_urls($content);
     $matched = FALSE;
     foreach ($urls as $url) {
-      if ($nid = linkback_lookup_nid($url)) {
+      if ($nid = vinculum_lookup_nid($url)) {
         $matched = TRUE;
         break;
       }
     }
     if (!$matched) {
-      return LINKBACK_ERROR_REMOTE_URL_MISSING_LINK;
+      return VINCULUM_ERROR_REMOTE_URL_MISSING_LINK;
     }
   }
 
   // @TODO: Allow other modules to add their own validation routines.
 
-  return LINKBACK_VALIDATES;
+  return VINCULUM_VALIDATES;
 }
 
 
 /**
- * Parse a node and send linkbacks to the discovered URLs (which haven't
- * already recorded a successful linkback).
- * Note that this function does not respect the node's "linkback_send" property
+ * Parse a node and send vinculums to the discovered URLs (which haven't
+ * already recorded a successful vinculum).
+ * Note that this function does not respect the node's "vinculum_send" property
  * - modules which invoke this function directly should check the node's
- * settings first to ensure the node permits linkbacks to be sent.
+ * settings first to ensure the node permits vinculums to be sent.
  *
  * @param Object $node
  * A fully loaded node object (or one which is in the process of being saved).
  */
-function linkback_node_process($node) {
+function vinculum_node_process($node) {
   // Look for external links.
-  $links = linkback_get_external_links($node);
-  linkback_send_linkbacks($links, $node);
+  $links = vinculum_get_external_links($node);
+  vinculum_send_vinculums($links, $node);
 }
 
 /**
- * Check if a node allows linkback operations.
+ * Check if a node allows vinculum operations.
  *
  * @param Object $node
  * The node to check.
@@ -441,7 +441,7 @@ function linkback_node_process($node) {
  *
  * @return Boolean
  */
-function linkback_node_allows_linkback($node, $op) {
+function vinculum_node_allows_vinculum($node, $op) {
   // Both send and receive ops depend on the node allowing anonymous access.
   if (!node_access('view', $node, drupal_anonymous_user())) {
     return FALSE;
@@ -449,19 +449,19 @@ function linkback_node_allows_linkback($node, $op) {
 
   switch ($op) {
     case 'send':
-      return isset($node->linkback_send) ? $node->linkback_send : variable_get("linkback_send_{$node->type}", TRUE);
+      return isset($node->vinculum_send) ? $node->vinculum_send : variable_get("vinculum_send_{$node->type}", TRUE);
 
     case 'receive':
-      return isset($node->linkback_receive) ? $node->linkback_receive : variable_get("linkback_receive_{$node->type}", TRUE);
+      return isset($node->vinculum_receive) ? $node->vinculum_receive : variable_get("vinculum_receive_{$node->type}", TRUE);
   }
 }
 
 /**
  * Get a list of external links from a node.
  *
- * This invokes hook_linkback_get_external_links.
- * By default, the linkback module checks only the BODY field.  Create an
- * implementation of hook_linkback_get_external_links() to check other fields.
+ * This invokes hook_vinculum_get_external_links.
+ * By default, the vinculum module checks only the BODY field.  Create an
+ * implementation of hook_vinculum_get_external_links() to check other fields.
  *
  * @param Object $node
  * The node to check.
@@ -469,8 +469,8 @@ function linkback_node_allows_linkback($node, $op) {
  * @return array
  * An array of external link URLs.
  */
-function linkback_get_external_links($node) {
-  $links = module_invoke_all('linkback_get_external_links', $node);
+function vinculum_get_external_links($node) {
+  $links = module_invoke_all('vinculum_get_external_links', $node);
 
   // Remove duplicate links.
   $links = array_unique($links);
@@ -480,18 +480,18 @@ function linkback_get_external_links($node) {
 
 
 /**
- * Invoke linkback handlers on each external link to record a linkback.
+ * Invoke vinculum handlers on each external link to record a vinculum.
  *
  * @param Array $links
  * An array of external URLs.
  */
-function linkback_send_linkbacks($links, $node) {
-  // The initial source URL is defined as node/xxx.  The linkback module
-  // provides an implementation of hook_linkback_link_send_alter for the path
+function vinculum_send_vinculums($links, $node) {
+  // The initial source URL is defined as node/xxx.  The vinculum module
+  // provides an implementation of hook_vinculum_link_send_alter for the path
   // module to support node-aliases.
   $source = "node/{$node->nid}";
 
-  // Build up a list of linkback records for altering.
+  // Build up a list of vinculum records for altering.
   $records = array();
   foreach ($links as $link) {
     $records[$link] = (object) array(
@@ -500,21 +500,21 @@ function linkback_send_linkbacks($links, $node) {
     );
   }
 
-  // Invoke hook_linkback_link_send_alter().
+  // Invoke hook_vinculum_link_send_alter().
   // Allow other modules to change the source/target URLs before sending
-  // linkbacks.
+  // vinculums.
   // The node property is unalterable.
-  drupal_alter('linkback_link_send', $records, $node);
+  drupal_alter('vinculum_link_send', $records, $node);
 
   foreach ($records as $record) {
-    if (!linkback_is_sent($node->nid, $record->target)) {
-      linkback_send_single_linkback($record->source, $record->target, $node);
+    if (!vinculum_is_sent($node->nid, $record->target)) {
+      vinculum_send_single_vinculum($record->source, $record->target, $node);
     }
   }
 }
 
 /**
- * Invoke linkback handlers to send a linkback.
+ * Invoke vinculum handlers to send a vinculum.
  *
  * @param String $source
  * The canonical URL of the local node.
@@ -524,13 +524,13 @@ function linkback_send_linkbacks($links, $node) {
  * The local node object.
  *
  * @return Boolean
- * TRUE if the remote server accepts the linkback request.
+ * TRUE if the remote server accepts the vinculum request.
  */
-function linkback_send_single_linkback($source, $target, $node) {
-  // Record the timestamp of this attempt in the {node_linkback_sent} table.
-  // This allows linkbacks which have not been successful to be re-attempted
+function vinculum_send_single_vinculum($source, $target, $node) {
+  // Record the timestamp of this attempt in the {node_vinculum_sent} table.
+  // This allows vinculums which have not been successful to be re-attempted
   // periodically.
-  db_merge('node_linkback_sent')
+  db_merge('node_vinculum_sent')
     ->key(array(
       'nid' => $node->nid,
       'url' => $target,
@@ -540,10 +540,10 @@ function linkback_send_single_linkback($source, $target, $node) {
     ))
     ->execute();
 
-  $handlers = linkback_get_handler();
+  $handlers = vinculum_get_handler();
   foreach ($handlers as $handler) {
-    // Invoke hook_linkback_send().
-    $callback = $handler->module . '_linkback_send';
+    // Invoke hook_vinculum_send().
+    $callback = $handler->module . '_vinculum_send';
     // Ensure the function exists before attempting to call it.
     if (!function_exists($callback)) {
       continue;
@@ -558,9 +558,9 @@ function linkback_send_single_linkback($source, $target, $node) {
         '%node_title' => $node->title,
         '%handler'    => $handler->module,
       );
-      watchdog('Linkback', 'Linkback sent to %target for node <a href="@node_url">%node_title</a> using %handler.', $params, WATCHDOG_DEBUG);
+      watchdog('Vinculum', 'Vinculum sent to %target for node <a href="@node_url">%node_title</a> using %handler.', $params, WATCHDOG_DEBUG);
 
-      db_merge('node_linkback_sent')
+      db_merge('node_vinculum_sent')
         ->key(array(
           'nid' => $node->nid,
           'url' => $target,
@@ -579,7 +579,7 @@ function linkback_send_single_linkback($source, $target, $node) {
     '@node_url'   => url("node/{$node->nid}"),
     '%node_title' => $node->title,
   );
-  watchdog('Linkback', 'Linkback could not be sent to %target for node <a href="@node_url">%node_title</a> - no linkback support found.', $params, WATCHDOG_DEBUG);
+  watchdog('Vinculum', 'Vinculum could not be sent to %target for node <a href="@node_url">%node_title</a> - no vinculum support found.', $params, WATCHDOG_DEBUG);
   return FALSE;
 }
 
@@ -595,7 +595,7 @@ function linkback_send_single_linkback($source, $target, $node) {
  * @return Int|FALSE
  * The node nid (if a match for the URL is found), or FALSE.
  */
-function linkback_lookup_nid($url) {
+function vinculum_lookup_nid($url) {
   // Strip the domain from the URL (if present).
   if (preg_match('#^(https?://[^/]+/).*#', $url, $matches)) {
     $url = drupal_substr($url, drupal_strlen($matches[1]));
@@ -613,7 +613,7 @@ function linkback_lookup_nid($url) {
 }
 
 /**
- * Check if a linkback has already been received for a particular node/URL.
+ * Check if a vinculum has already been received for a particular node/URL.
  *
  * @param Int $nid
  * The node nid.
@@ -621,10 +621,10 @@ function linkback_lookup_nid($url) {
  * The URL of the external site.
  *
  * @return Boolean
- * TRUE if the linkback has already been registered.
+ * TRUE if the vinculum has already been registered.
  */
-function linkback_is_received($nid, $url) {
-  $result = db_select('node_linkback_received', 'nlr', array('target' => 'slave'))
+function vinculum_is_received($nid, $url) {
+  $result = db_select('node_vinculum_received', 'nlr', array('target' => 'slave'))
     ->fields('nlr', array('nid'))
     ->condition("nlr.nid", $nid)
     ->condition("nlr.url", $url)
@@ -634,7 +634,7 @@ function linkback_is_received($nid, $url) {
 }
 
 /**
- * Check if a linkback has already been sent for a particular node/URL.
+ * Check if a vinculum has already been sent for a particular node/URL.
  *
  * @param Int $nid
  * The node nid.
@@ -642,10 +642,10 @@ function linkback_is_received($nid, $url) {
  * The URL of the external site.
  *
  * @return Boolean
- * TRUE if the linkback has already been sent.
+ * TRUE if the vinculum has already been sent.
  */
-function linkback_is_sent($nid, $url) {
-  $result = db_select('node_linkback_sent', 'nls', array('target' => 'slave'))
+function vinculum_is_sent($nid, $url) {
+  $result = db_select('node_vinculum_sent', 'nls', array('target' => 'slave'))
     ->fields('nls', array('nid'))
     ->condition("nls.nid", $nid)
     ->condition("nls.url", $url)
@@ -656,16 +656,16 @@ function linkback_is_sent($nid, $url) {
 }
 
 /**
- * Get a list of linkback-handlers and their attributes.
+ * Get a list of vinculum-handlers and their attributes.
  *
  * @return Array
- * An array of linkback handler objects. Each handler has the properties:
+ * An array of vinculum handler objects. Each handler has the properties:
   * - module   The system-name of the module.
-  * - protocol The human-readable name of the linkback protocol provided.
+  * - protocol The human-readable name of the vinculum protocol provided.
   * - weight   The weight of the module.
  */
-function linkback_get_handler($handler = NULL) {
-  $handlers = linkback_load_all_handlers();
+function vinculum_get_handler($handler = NULL) {
+  $handlers = vinculum_load_all_handlers();
   if (is_null($handler)) {
     return $handlers;
   }
@@ -678,38 +678,38 @@ function linkback_get_handler($handler = NULL) {
 }
 
 /**
- * Fetch a list of all the linkback handlers.
+ * Fetch a list of all the vinculum handlers.
  *
  * @param optional Boolean $reset_cache
  * Set to TRUE to force a relooad of the handlers from their hooks.
  *
  * @return Array
- * A list of linkback handlers, ordered according to the priority from most
+ * A list of vinculum handlers, ordered according to the priority from most
  * important to least. Each handler has the properties:
  * - module   The system-name of the module.
- * - protocol The human-readable name of the linkback protocol provided.
+ * - protocol The human-readable name of the vinculum protocol provided.
  * - weight   The weight of the module.
  */
-function linkback_load_all_handlers($reset_cache = FALSE) {
-  if (!($reset_cache) && $cache = cache_get('linkback_handlers')) {
+function vinculum_load_all_handlers($reset_cache = FALSE) {
+  if (!($reset_cache) && $cache = cache_get('vinculum_handlers')) {
     $handlers = $cache->data;
   }
   else {
-    // Invoke hook_linkback_handler().
+    // Invoke hook_vinculum_handler().
     // module_invoke_all() will order the results by module-weight: no further
     // sorting required.
-    $linkback_handler_modules = module_implements('linkback_handler');
+    $vinculum_handler_modules = module_implements('vinculum_handler');
 
-    $weights = _linkback_get_module_weights($linkback_handler_modules);
+    $weights = _vinculum_get_module_weights($vinculum_handler_modules);
     $handlers = array();
-    foreach ($linkback_handler_modules as $module) {
-      $callback = "{$module}_linkback_handler";
+    foreach ($vinculum_handler_modules as $module) {
+      $callback = "{$module}_vinculum_handler";
 
       $handlers[$module] = (object) $callback();
       $handlers[$module]->module = $module;
       $handlers[$module]->weight = $weights[$module];
     }
-    cache_set('linkback_handlers', $handlers);
+    cache_set('vinculum_handlers', $handlers);
   }
 
   return $handlers;
@@ -721,16 +721,16 @@ function linkback_load_all_handlers($reset_cache = FALSE) {
  * @param Array $weights
  * Array of module weights, keyed by the system-name of the module.
  */
-function linkback_set_weights($weights) {
+function vinculum_set_weights($weights) {
   foreach ($weights as $module => $weight) {
-    _linkback_set_weight($module, $weight);
+    _vinculum_set_weight($module, $weight);
   }
 
   // We need to rebuild the module-weight cache when this is called.
   cache_clear_all('hook_info',         'cache_bootstrap');
   cache_clear_all('module_implements', 'cache_bootstrap');
   cache_clear_all('system_list',       'cache_bootstrap');
-  cache_clear_all('linkback_handlers', 'cache');
+  cache_clear_all('vinculum_handlers', 'cache');
 }
 
 
@@ -750,12 +750,12 @@ function linkback_set_weights($weights) {
  * An array of settings objects (each with the properties 'nid', 'send' and
  * 'receive'), indexed by node nid.
  */
-function _linkback_node_get_settings($nids) {
+function _vinculum_node_get_settings($nids) {
   if (is_numeric($nids)) {
     $nids = array($nids);
   }
 
-  $result = db_select('node_linkback_settings', 'nls', array('target' => 'slave'))
+  $result = db_select('node_vinculum_settings', 'nls', array('target' => 'slave'))
     ->fields('nls', array('nid', 'send', 'receive'))
     ->condition("nls.nid", $nids, 'IN')
     ->execute()
@@ -765,19 +765,19 @@ function _linkback_node_get_settings($nids) {
 }
 
 /**
- * Save the linkback-settings for a node, scan the node for links, and fire off
- * linkbacks as needed.
+ * Save the vinculum-settings for a node, scan the node for links, and fire off
+ * vinculums as needed.
  */
-function _linkback_node_save($node) {
+function _vinculum_node_save($node) {
   // If a custom send/receive setting has not been provided, use the default
   // setting for this node-type.
   $settings = array(
-    'send'    => isset($node->linkback_send)    ? (bool) $node->linkback_send    : variable_get("linkback_send_{$node->type}", TRUE),
-    'receive' => isset($node->linkback_receive) ? (bool) $node->linkback_receive : variable_get("linkback_receive_{$node->type}", TRUE),
+    'send'    => isset($node->vinculum_send)    ? (bool) $node->vinculum_send    : variable_get("vinculum_send_{$node->type}", TRUE),
+    'receive' => isset($node->vinculum_receive) ? (bool) $node->vinculum_receive : variable_get("vinculum_receive_{$node->type}", TRUE),
   );
 
-  // Update the flags in {node_linkback_settings}.
-  db_merge('node_linkback_settings')
+  // Update the flags in {node_vinculum_settings}.
+  db_merge('node_vinculum_settings')
     ->key(array(
       'nid' => $node->nid,
       ))
@@ -791,13 +791,13 @@ function _linkback_node_save($node) {
 
   if ($settings['send']) {
     // TODO: do this now or later?
-    linkback_node_process($node);
+    vinculum_node_process($node);
   }
 }
 
 /**
  * Get the module-weights for a set of modules (used to fetch the weights of
- * the linkback-handler modules).
+ * the vinculum-handler modules).
  *
  * @param Array $modules
  * An array of module names.
@@ -805,7 +805,7 @@ function _linkback_node_save($node) {
  * @return Array
  * An array of module-weights, keyed by module name.
  */
-function _linkback_get_module_weights($modules) {
+function _vinculum_get_module_weights($modules) {
   if (!is_array($modules) || empty($modules)) {
     return array();
   }
@@ -834,7 +834,7 @@ function _linkback_get_module_weights($modules) {
  * @param Int $weight
  * The new weight to set.
  */
-function _linkback_set_weight($module, $weight) {
+function _vinculum_set_weight($module, $weight) {
   db_merge('system')
     ->key(array(
       'type' => 'module',
@@ -847,21 +847,21 @@ function _linkback_set_weight($module, $weight) {
 }
 
 /**
- * Helper function to generate standard linkback permission list for a given type.
+ * Helper function to generate standard vinculum permission list for a given type.
  *
  * @param $type
  *   The machine-readable name of the node type.
  * @return array
  *   An array of permission names and descriptions.
  */
-function _linkback_list_permissions($type) {
+function _vinculum_list_permissions($type) {
   $info = node_type_get_type($type);
   $type = check_plain($info->type);
 
   // Build standard list of node permissions for this type.
   $perms = array(
-    "configure $type linkbacks" => array(
-      'title' => t('%type_name: Configure linkbacks', array('%type_name' => $info->name)),
+    "configure $type vinculums" => array(
+      'title' => t('%type_name: Configure vinculums', array('%type_name' => $info->name)),
       'description' => t('This is only available to users who already have permission to edit the content.'),
     ),
   );
@@ -878,7 +878,7 @@ function _linkback_list_permissions($type) {
  * @return String
  *   The text found in the node's body field.
  */
-function _linkback_extract_text($node) {
+function _vinculum_extract_text($node) {
   $langcode = field_language('node', $node, 'body');
 
   // If body is empty, abort early.
@@ -900,7 +900,7 @@ function _linkback_extract_text($node) {
 /**
  * Extract all the external URLs from a single string.
  */
-function _linkback_extract_urls($text) {
+function _vinculum_extract_urls($text) {
   // Check for the href value of explicit <a> tags, and remove the text found
   // within the <a> tags (because the "Convert URLs into links" filter may
   // shorten <a> text, making uniqueness difficult).

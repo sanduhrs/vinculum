@@ -1,7 +1,7 @@
-name = Linkback handler - Trackback autodiscovery
+name = Vinculum handler - Trackback autodiscovery
 description = Automatically discover support for the Trackback protocol and send trackbacks.
 core = 7.x
-package = Linkback
-dependencies[] = linkback_trackback
-files[] = linkback_trackback_autodiscovery.module
-files[] = linkback_trackback_autodiscovery.test
+package = Vinculum
+dependencies[] = vinculum_trackback
+files[] = vinculum_trackback_autodiscovery.module
+files[] = vinculum_trackback_autodiscovery.test

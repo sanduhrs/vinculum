@@ -1,32 +1,32 @@
 <?php
 /**
  * @file
- * Tests for the linkback comment module.
+ * Tests for the vinculum comment module.
  */
 
 /**
- * Test that comments are added when a linkback is received.
+ * Test that comments are added when a vinculum is received.
  */
-class LinkbackCommentTestCase extends DrupalWebTestCase {
+class VinculumCommentTestCase extends DrupalWebTestCase {
 
   public static function getInfo() {
     return array(
       'name' => 'Comments',
-      'description' => 'Test that a comment is added when a linkback is received.',
-      'group' => 'Linkback',
+      'description' => 'Test that a comment is added when a vinculum is received.',
+      'group' => 'Vinculum',
     );
   }
 
   function setUp() {
-    parent::setUp('linkback', 'linkback_comment');
+    parent::setUp('vinculum', 'vinculum_comment');
 
-    // Create a content-type; enable it to receive linkbacks.
+    // Create a content-type; enable it to receive vinculums.
     $type_machine_name = 'dummy_contenttype1';
     $type = array(
       'type' => $type_machine_name,
-      'name' => st('Linkback dummy content-type 1'),
+      'name' => st('Vinculum dummy content-type 1'),
       'base' => 'node_content',
-      'description' => st("A dummy content-type, used for testing the Linkback Trackback module. This content-type should not be visible."),
+      'description' => st("A dummy content-type, used for testing the Vinculum Trackback module. This content-type should not be visible."),
       'custom' => 1,
       'modified' => 1,
       'locked' => 0,
@@ -35,9 +35,9 @@ class LinkbackCommentTestCase extends DrupalWebTestCase {
     node_type_save($type);
     node_add_body_field($type);
 
-    // Enable linkback-receive for this content-type.
-    variable_set("linkback_send_{$type_machine_name}", FALSE);
-    variable_set("linkback_receive_{$type_machine_name}", TRUE);
+    // Enable vinculum-receive for this content-type.
+    variable_set("vinculum_send_{$type_machine_name}", FALSE);
+    variable_set("vinculum_receive_{$type_machine_name}", TRUE);
   }
 
 

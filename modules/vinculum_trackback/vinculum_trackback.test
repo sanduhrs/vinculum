@@ -1,32 +1,32 @@
 <?php
 /**
  * @file
- * Tests for the linkback trackback module.
+ * Tests for the vinculum trackback module.
  */
 
 /**
  * Test the receive mechanism for trackbacks.
  */
-class LinkbackTrackbackReceiveTestCase extends DrupalWebTestCase {
+class VinculumTrackbackReceiveTestCase extends DrupalWebTestCase {
 
   public static function getInfo() {
     return array(
       'name' => 'Trackback: receiving trackbacks',
-      'description' => 'Test the trackback rdf data is added to nodes which are enabled for receiving linkbacks, and that the receiving mechanism correctly stores trackbacks.',
-      'group' => 'Linkback',
+      'description' => 'Test the trackback rdf data is added to nodes which are enabled for receiving vinculums, and that the receiving mechanism correctly stores trackbacks.',
+      'group' => 'Vinculum',
     );
   }
 
   function setUp() {
-    parent::setUp('linkback', 'linkback_trackback');
+    parent::setUp('vinculum', 'vinculum_trackback');
 
-    // Create a content-type; enable it to receive linkbacks.
+    // Create a content-type; enable it to receive vinculums.
     $type_machine_name = 'dummy_contenttype1';
     $type = array(
       'type' => $type_machine_name,
-      'name' => st('Linkback dummy content-type 1'),
+      'name' => st('Vinculum dummy content-type 1'),
       'base' => 'node_content',
-      'description' => st("A dummy content-type, used for testing the Linkback Trackback module. This content-type should not be visible."),
+      'description' => st("A dummy content-type, used for testing the Vinculum Trackback module. This content-type should not be visible."),
       'custom' => 1,
       'modified' => 1,
       'locked' => 0,
@@ -35,22 +35,22 @@ class LinkbackTrackbackReceiveTestCase extends DrupalWebTestCase {
     node_type_save($type);
     node_add_body_field($type);
 
-    // Enable linkback-receive for this content-type.
-    variable_set("linkback_send_{$type_machine_name}", FALSE);
-    variable_set("linkback_receive_{$type_machine_name}", TRUE);
+    // Enable vinculum-receive for this content-type.
+    variable_set("vinculum_send_{$type_machine_name}", FALSE);
+    variable_set("vinculum_receive_{$type_machine_name}", TRUE);
   }
 
 
   /**
    * Test that nodes correctly add the trackback RDF metadata when configured
-   * to receive linkbacks.
+   * to receive vinculums.
    */
   function testRdfMetadataAddedToNodes() {
 
     // Create a new node.
     $settings = array(
       'type' => 'dummy_contenttype1',
-      'title' => 'Example node used for testing the linkback trackback module.',
+      'title' => 'Example node used for testing the vinculum trackback module.',
       'body' => array(
         LANGUAGE_NONE => array(
           0 => array(
@@ -88,15 +88,15 @@ class LinkbackTrackbackReceiveTestCase extends DrupalWebTestCase {
     $rdf_text .= '</rdf:RDF>';
     $rdf_text .= "\n-->\n";
 
-    $this->assertRaw($rdf_text, t('The RDF metadata is added to the page when linkback is enabled for a node.'));
+    $this->assertRaw($rdf_text, t('The RDF metadata is added to the page when vinculum is enabled for a node.'));
 
-    // Re-configure the node to disable linkback-receive.
-    $node->linkback_receive = FALSE;
-    _linkback_node_save($node);
+    // Re-configure the node to disable vinculum-receive.
+    $node->vinculum_receive = FALSE;
+    _vinculum_node_save($node);
 
     // Retest for the RDF.
     $this->drupalGet("node/{$node->nid}");
-    $this->assertNoRaw($rdf_text, t('The RDF metadata is NOT added to the page when linkback is disabled for a node.'));
+    $this->assertNoRaw($rdf_text, t('The RDF metadata is NOT added to the page when vinculum is disabled for a node.'));
   }
 
 
@@ -108,7 +108,7 @@ class LinkbackTrackbackReceiveTestCase extends DrupalWebTestCase {
     // Create a new node.
     $settings = array(
       'type' => 'dummy_contenttype1',
-      'title' => 'Example node used for testing the linkback trackback module.',
+      'title' => 'Example node used for testing the vinculum trackback module.',
       'body' => array(
         LANGUAGE_NONE => array(
           0 => array(
@@ -150,24 +150,24 @@ class LinkbackTrackbackReceiveTestCase extends DrupalWebTestCase {
     $this->assertEqual($out, $expected_response, t('The service response conforms to the Trackback standard for successful requests.'));
 
     // There should now be an entry in the db tables:
-    // - linkback_trackback_received
-    // - node_linkback_received
-    $result = db_select('linkback_trackback_received', 'l')
+    // - vinculum_trackback_received
+    // - node_vinculum_received
+    $result = db_select('vinculum_trackback_received', 'l')
       ->fields('l')
       ->condition('l.nid', $node->nid)
       ->condition('l.url', 'http://example.com/foshizzle')
       ->execute()
       ->fetchAll();
-    $this->assertEqual(1, count($result), t('A trackback record has been saved to the linkback_trackback_received table.'));
+    $this->assertEqual(1, count($result), t('A trackback record has been saved to the vinculum_trackback_received table.'));
 
 
-    $result = db_select('node_linkback_received', 'l')
+    $result = db_select('node_vinculum_received', 'l')
       ->fields('l')
       ->condition('l.nid', $node->nid)
       ->condition('l.url', 'http://example.com/foshizzle')
       ->execute()
       ->fetchAll();
-    $this->assertEqual(1, count($result), t('A linkback record has been saved to the node_linkback_received table.'));
+    $this->assertEqual(1, count($result), t('A vinculum record has been saved to the node_vinculum_received table.'));
   }
 
 
@@ -187,26 +187,26 @@ class LinkbackTrackbackReceiveTestCase extends DrupalWebTestCase {
 /**
  * Test the Send mechanism for trackbacks.
  */
-class LinkbackTrackbackSendTestCase extends DrupalWebTestCase {
+class VinculumTrackbackSendTestCase extends DrupalWebTestCase {
 
   public static function getInfo() {
     return array(
       'name' => 'Trackback: send trackbacks',
       'description' => 'Test that trackbacks are sent when a node is saved.',
-      'group' => 'Linkback',
+      'group' => 'Vinculum',
     );
   }
 
   function setUp() {
-    parent::setUp('linkback', 'linkback_trackback');
+    parent::setUp('vinculum', 'vinculum_trackback');
 
-    // Create a content-type; enable it to send linkbacks.
+    // Create a content-type; enable it to send vinculums.
     $type_machine_name = 'dummy_contenttype1';
     $type = array(
       'type' => $type_machine_name,
-      'name' => st('Linkback dummy content-type 1'),
+      'name' => st('Vinculum dummy content-type 1'),
       'base' => 'node_content',
-      'description' => st("A dummy content-type, used for testing the Linkback Trackback module. This content-type should not be visible."),
+      'description' => st("A dummy content-type, used for testing the Vinculum Trackback module. This content-type should not be visible."),
       'custom' => 1,
       'modified' => 1,
       'locked' => 0,
@@ -215,8 +215,8 @@ class LinkbackTrackbackSendTestCase extends DrupalWebTestCase {
     node_type_save($type);
     node_add_body_field($type);
 
-    // Enable linkback-receive for this content-type.
-    variable_set("linkback_send_{$type_machine_name}", TRUE);
+    // Enable vinculum-receive for this content-type.
+    variable_set("vinculum_send_{$type_machine_name}", TRUE);
   }
 
 }

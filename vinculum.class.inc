@@ -1,23 +1,23 @@
 <?php
 /**
  * @file
- * Class to store data about a received linkback.
+ * Class to store data about a received vinculum.
  */
 
-class linkback {
-  // The node nid that the linkback is recorded against.
+class vinculum {
+  // The node nid that the vinculum is recorded against.
   private $nid;
 
   // The remote URL.
   private $url;
 
-  // The handler recording the linkback (e.g. pingback, trackback, etc).
+  // The handler recording the vinculum (e.g. pingback, trackback, etc).
   private $handler;
 
-  // The IP address of the remote site which registered the linkback.
+  // The IP address of the remote site which registered the vinculum.
   private $origin_ip;
 
-  // Timestamp when the linkback was registered.
+  // Timestamp when the vinculum was registered.
   private $timestamp;
 
   // Additional data supplied by the handler.
@@ -92,7 +92,7 @@ class linkback {
   }
 
   /**
-   * Call if the linkback has been successfully validated.
+   * Call if the vinculum has been successfully validated.
    */
   public function isValid() {
     $this->validated = TRUE;
