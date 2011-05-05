@@ -87,7 +87,7 @@ function vinculum_pingback_vinculum_send($target, $source, $node) {
         '@errno' => xmlrpc_errno(),
         '@description' => xmlrpc_error_msg(),
       );
-      watchdog('pingback', 'Pingback to %target from %source failed. Error @errno: @description', $params, WATCHDOG_WARNING);
+      watchdog('pingback', 'Pingback to %target from %source failed.<br />Error @errno: @description', $params, WATCHDOG_WARNING);
       return FALSE;
     }
   }
@@ -112,7 +112,7 @@ function vinculum_pingback_target_supports_pingback($url) {
   $result = drupal_http_request($url, array(), 'HEAD');
   if (!isset($result->error) && is_array($result->headers) && isset($result->headers['X-Pingback'])) {
     $endpoint = check_url($result->headers['X-Pingback']);
-    watchdog('Pingback', 'Pingback auto-discovery is supported on %url, with the Pingback endpoint %endpoint (using X-PINGBACK HTTP header).', array('@url' => $url, '%endpoint' => $endpoint), WATCHDOG_DEBUG);
+    watchdog('Pingback', 'Pingback auto-discovery is supported on %url, with the Pingback endpoint %endpoint.<br />(using X-PINGBACK HTTP header).', array('%url' => $url, '%endpoint' => $endpoint), WATCHDOG_DEBUG);
     return $endpoint;
   }
 
@@ -123,7 +123,7 @@ function vinculum_pingback_target_supports_pingback($url) {
       // This regexp is the one provided in the spec.
       if (preg_match('#<link rel="pingback" href="([^"]+)" ?/?>#', $result->data, $matches)) {
         $endpoint = check_url($matches[1]);
-        watchdog('Pingback', 'Pingback auto-discovery is supported on %url, with the Pingback endpoint %endpoint (using &lt;link rel="pingback"&gt; tag).', array('@url' => $url, '%endpoint' => $endpoint), WATCHDOG_DEBUG);
+        watchdog('Pingback', 'Pingback auto-discovery is supported on %url, with the Pingback endpoint %endpoint.<br />(using &lt;link rel="pingback"&gt; tag).', array('%url' => $url, '%endpoint' => $endpoint), WATCHDOG_DEBUG);
         return $endpoint;
       }
     }
