@@ -4,6 +4,9 @@
  * Provide the Pingback protocol to the Vinculum module.
  */
 
+// User-Agent to send when connecting to external sites.
+define ('VINCULUM_PINGBACK_UA', 'Drupal Pingback (+http://drupal.org/project/vinculum)');
+
 /**
  * @defgroup vinculum_pingback_error_codes Pingback protocol error codes.
  * @{
@@ -109,16 +112,18 @@ function vinculum_pingback_vinculum_send($target, $source, $node) {
  */
 function vinculum_pingback_target_supports_pingback($url) {
   // 1.  Check for an X-Pingback header.
-  $result = drupal_http_request($url, array(), 'HEAD');
-  if (!isset($result->error) && is_array($result->headers) && isset($result->headers['X-Pingback'])) {
-    $endpoint = check_url($result->headers['X-Pingback']);
+  $result = drupal_http_request($url, array('method' => 'HEAD', 'headers' => array('User-Agent' => VINCULUM_PINGBACK_UA)));
+
+  // NB: all headers from drupal_http_request are changed to lower-case.
+  if (!isset($result->error) && is_array($result->headers) && isset($result->headers['x-pingback'])) {
+    $endpoint = check_url($result->headers['x-pingback']);
     watchdog('Pingback', 'Pingback auto-discovery is supported on %url, with the Pingback endpoint %endpoint.<br />(using X-PINGBACK HTTP header).', array('%url' => $url, '%endpoint' => $endpoint), WATCHDOG_DEBUG);
     return $endpoint;
   }
 
   // 2.  Do a full request for the page, check for a <link> tag.
   elseif (!isset($result->error)) {
-    $result = drupal_http_request($url);
+    $result = drupal_http_request($url, array('method' => 'GET', 'headers' => array('User-Agent' => VINCULUM_PINGBACK_UA)));
     if (!isset($result->error)) {
       // This regexp is the one provided in the spec.
       if (preg_match('#<link rel="pingback" href="([^"]+)" ?/?>#', $result->data, $matches)) {
