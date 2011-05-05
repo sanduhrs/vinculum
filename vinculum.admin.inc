@@ -14,7 +14,7 @@ function vinculum_settings_form($form) {
   $form['vinculum_validate_remote_pages'] = array(
     '#type' => 'checkbox',
     '#title' => t('Validate remote pages'),
-    '#description' => t('When vinculums are received, check that the remote URL is reachable and contains a link to the referenced node.'),
+    '#description' => t('When linkbacks are received, check that the remote URL is reachable and contains a link to the referenced node.'),
     '#default_value' => variable_get('vinculum_validate_remote_pages', FALSE),
   );
 
@@ -54,6 +54,8 @@ function vinculum_settings_form($form) {
 function vinculum_settings_form_submit(&$form, &$form_state) {
   $weights = $form_state['values']['handlers'];
   vinculum_set_weights($weights);
+  variable_set('vinculum_validate_remote_pages', (bool) $form_state['values']['vinculum_validate_remote_pages']);
+
   drupal_set_message(t('Your settings have been saved.'));
 }
 
