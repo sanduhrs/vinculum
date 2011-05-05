@@ -71,7 +71,7 @@ function vinculum_pingback_vinculum_send($target, $source, $node) {
     $methods = array(
       'pingback.ping' => array($source, $target),
     );
-    $result = xmlrpc($this->xmlrpc_url, $methods);
+    $result = xmlrpc($xmlrpc_endpoint, $methods);
     if ($result) {
       $params = array(
         '%source' => $source,
