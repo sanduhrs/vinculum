@@ -1,0 +1,5 @@
+name = Vinculum Pingback Dummy Endpoints
+description = Provides a set of dummy endpoints to test auto-detection of pingback meta-data.
+package = Testing
+core = 7.x
+hidden = TRUE
