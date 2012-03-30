@@ -1,0 +1,13 @@
+name = Vinculum
+description = An API to provide support for linkback protocols such as pingback and trackback.
+core = 7.x
+php = 5.3
+package = Vinculum
+files[] = vinculum_received.entity.class.inc
+files[] = views/vinculum.views.inc
+files[] = views/handlers/vinculum_views_handler_field_refback_text.inc
+
+dependencies[] = entity
+
+
+;files[] = vinculum.test

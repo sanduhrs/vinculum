@@ -1,0 +1,198 @@
+<?php
+/**
+ * @file
+ * User-interface for configuring the vinculum module.
+ */
+
+
+/**********************************************************
+ * Hook implementations.
+ *********************************************************/
+
+/**
+ * Implements hook_help().
+ */
+function vinculum_ui_help($path, $arg) {
+  // Explain:
+  // - Vinculum protocol
+  // - Trackback protocol
+  // Send vs Receive
+  // Adding as comments/entities...
+  // Moderation (Mollom integration?)
+
+  switch ($path) {
+    // Main help for the Vinculum module.
+    case 'admin/help#vinculum':
+      break;
+
+    // The configuration page.
+    case 'admin/config/content/vinculum':
+      $output = '';
+      $output .= '<p>' . t('The vinculum handlers are prioritised by module-weight.') . '</p>';
+      return $output;
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function vinculum_ui_permission() {
+  $perms = array();
+
+  // This permission controls access to the admin-settings page at
+  // admin/config/content/vinculum and automatically grants access to configure
+  // ref-back settings on any node-type (that the user has permission to edit).
+  $perms['configure vinculum settings'] = array(
+    'title' => t('Administer vinculum settings'),
+  );
+
+  // View the full list of ref-backs sent and received.
+  $perms['view vinculum reports'] = array(
+    'title' => t('View vinculum reports'),
+  );
+
+  // node_permissions_get_configured_types() returns an array of node-types
+  // that should be managed by permissions.
+  foreach (node_permissions_get_configured_types() as $type => $info) {
+    // Build standard list of node permissions for this type.
+    $perms += array(
+      "configure $type vinculums" => array(
+        'title' => t('%type_name: Configure ref-backs', array('%type_name' => $info->name)),
+        'description' => t('This is only available to users who already have permission to edit the content.'),
+      ),
+    );
+  }
+  return $perms;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function vinculum_ui_theme() {
+  return array(
+    // Custom rendering for ref-back settings in forms.
+    'vinculum_ui__settings_form__handlers_element' => array(
+      'render element' => 'form',
+      'file' => 'vinculum_ui.admin.inc',
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function vinculum_ui_menu() {
+
+  // Global configuration page.
+  $items['admin/config/content/vinculum'] = array(
+    'title' => 'Vinculum',
+    'description' => 'Configure trackbacks and pingbacks.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('vinculum_ui__settings_form'),
+    'access arguments' => array('configure vinculum settings'),
+    'file' => 'vinculum_ui.admin.inc',
+  );
+
+  // Reporting.
+  $items['admin/reports/vinculum'] = array(
+    'title' => 'Vinculum',
+    'description' => 'List vinculums sent and received.',
+    'page callback' => 'vinculum_ui__report_sent',
+    'access arguments' => array('view vinculum reports'),
+    'file' => 'vinculum_ui.admin.inc',
+  );
+  $items['admin/reports/vinculum/sent'] = array(
+    'title' => 'Sent',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['admin/reports/vinculum/received'] = array(
+    'title' => 'Received',
+    'page callback' => 'vinculum_ui__report_received',
+    'access arguments' => array('view vinculum reports'),
+    'file' => 'vinculum_ui.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Configure which content-types can send/receive vinculums.
+ */
+function vinculum_ui_form_node_type_form_alter(&$form, &$form_state) {
+  $type = $form['#node_type'];
+
+  // The JS adds an appropriate description to the vertical-tab for Vinculums
+  // based on the chosen settings.
+  $form['additional_settings']['#attached']['js'][] = drupal_get_path('module', 'vinculum_ui') . '/vinculum_ui.js';
+
+  $form['vinculum'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Vinculums'),
+    '#description' => t('Default settings for new content:'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#group' => 'additional_settings',
+  );
+  $form['vinculum']['vinculum_receive'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Receive vinculums'),
+    '#description' => t('Allow %type nodes to receive vinculums from third party sites.', array('%type' => $type->name)),
+    '#default_value' => variable_get("vinculum_receive_{$type->type}", TRUE),
+  );
+  $form['vinculum']['vinculum_send'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Send vinculums'),
+    '#description' => t('Allow %type nodes to send vinculums to third party sites when the node is created or changed.', array('%type' => $type->name)),
+    '#default_value' => variable_get("vinculum_send_{$type->type}", TRUE),
+  );
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function vinculum_ui_form_alter(&$form, $form_state, $form_id) {
+
+  // Add 'send' and 'receive' controls to node/add and node/nnn/edit forms.
+  if (strpos($form_id, '_node_form') && isset($form['#node'])) {
+    $node = $form['#node'];
+    $node_type = $form['#node']->type;
+
+    // Get the configured vinculum settings for this node (if already set), or
+    // the defaults for the node's content-type.
+    $settings = (object) array(
+      'send'    => isset($node->vinculum_send)    ? $node->vinculum_send    : variable_get("vinculum_send_{$node_type}", TRUE),
+      'receive' => isset($node->vinculum_receive) ? $node->vinculum_receive : variable_get("vinculum_receive_{$node_type}", TRUE),
+    );
+
+    // Users may control whether ref-backs (send / receive) are enabled for a
+    // given node if they have permission for that node-type, or a global admin
+    // permission.
+    $access = user_access("configure {$node_type} vinculums") || user_access('administer content types') || user_access('configure vinculum settings');
+
+    // The JS handles the vertical-tabs text.
+    $form['additional_settings']['#attached']['js'][] = drupal_get_path('module', 'vinculum_ui') . '/vinculum_ui.js';
+
+    $form['vinculum'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Ref-backs'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#group' => 'additional_settings',
+      '#access' => $access,
+    );
+    $form['vinculum']['vinculum_receive'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Receive ref-backs'),
+      '#default_value' => $settings->receive,
+    );
+    $form['vinculum']['vinculum_send'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Send ref-backs'),
+      '#default_value' => $settings->send,
+    );
+  }
+}

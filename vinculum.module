@@ -1,0 +1,851 @@
+<?php
+/**
+ * @file
+ * Provide an API for vinculum-handlers to support vinculum-registration on
+ * nodes.  At least one vinculum-handler (such as Pingback or Trackback) should
+ * be enabled.
+ *
+ * Architecture overview:
+ * - SENDING refbacks
+ *   When nodes are added or updated, hook_node_presave creates a list of URLs
+ *   which are references by the node.
+ *   In hook_insert or hook_update, vinculum_send_refbacks() is invoked to
+ *   attempt to send refbacks using the enabled handlers.
+ *
+ * - RECEIVING refbacks:
+ *   Each handler implements its own way of detecting incoming refbacks (for
+ *   example, the pingback module provides an XML-RPC service). All incoming
+ *   data is parsed and presented to vinculum_receive().
+ *
+ * Data objects:
+ * - SENT pingbacks are stored in the {node_vinculum_sent} table.
+ * - RECEIVED pingbacks are stored in the {node_vinculum_received} table, and
+ *   are exposed as entities.
+ *
+ * Meta-data about received ref-backs:
+ * - GENERAL FOR ALL REF-BACKS:
+ *   - Node NID
+ *   - URL of the article which linked to us
+ *   - Title   (extracted from the <title> tag)
+ *   - Excerpt (extracted from the body content)
+ *   - IP address
+ *   - Timestamp
+ *
+ * - PINGBACKS:
+ *   - as GENERAL
+ *
+ * - TRACKBACKS:
+ *   - as GENERAL
+ *   - Title     (provided in the trackback request)
+ *   - Excerpt   (provided in the trackback request)
+ *   - Blog name (provided in the trackback request)
+ */
+
+// User-agent used when extracting titles and excerpts.
+define('VINCULUM_UA', 'Drupal Refback (+http://drupal.org/project/vinculum)');
+
+// The local node could not be found.
+define('VINCULUM_ERROR_LOCAL_NODE_NOT_FOUND', 1);
+
+// The local node could not be used as a ref-back resource (e.g. ref-backs are
+// disabled on the node).
+define('VINCULUM_ERROR_LOCAL_NODE_REFBACK_NOT_ALLOWED', 2);
+
+// The ref-back has previously been registered.
+define('VINCULUM_ERROR_REFBACK_ALREADY_REGISTERED', 3);
+
+
+/**********************************************************
+ * Hook implementations.
+ *********************************************************/
+
+/**
+ * Implements hook_views_api().
+ */
+function vinculum_views_api() {
+  return array(
+    'api' => '3.0-alpha1',
+    'path' => drupal_get_path('module', 'vinculum') . '/views',
+  );
+}
+
+/**
+ * Implements hook_entity_info().
+ */
+function vinculum_entity_info() {
+  $return = array(
+    'vinculum_received' => array(
+      'label' => t('Ref-back'),
+      'plural label' => t('Ref-backs'),
+      'description' => t('Pingbacks, trackbacks, and other referral types.'),
+      'entity class' => 'VinculumReceived',
+      'controller class' => 'EntityAPIController',
+      'base table' => 'node_vinculum_received',
+      'fieldable' => FALSE,
+      'entity keys' => array(
+        'id' => 'id',
+        'label' => 'title',
+      ),
+      'bundles' => array(),
+      'uri callback' => 'entity_class_uri',
+      'module' => 'vinculum',
+    ),
+  );
+
+  return $return;
+}
+
+/**
+ * Implements hook_node_load().
+ *
+ * When a node is loaded, add the 'send' and 'receive' values (whether
+ * ref-backs should be sent or received when the node is saved) to the node
+ * object.
+ */
+function vinculum_node_load($nodes, $types) {
+  $nids = array_keys($nodes);
+
+  // Load the vinculum settings for these nodes.
+  $vinculum_node_settings = _vinculum_node_get_settings($nids);
+
+  foreach ($nids as $nid) {
+    // If this node has already been configured, use the node's settings.
+    if (array_key_exists($nid, $vinculum_node_settings)) {
+      $nodes[$nid]->vinculum_send    = $vinculum_node_settings[$nid]->send;
+      $nodes[$nid]->vinculum_receive = $vinculum_node_settings[$nid]->receive;
+    }
+    // Fallback to defaults.
+    else {
+      $node_type = $nodes[$nid]->type;
+      $nodes[$nid]->vinculum_send    = variable_get("vinculum_send_{$node_type}", TRUE);
+      $nodes[$nid]->vinculum_receive = variable_get("vinculum_receive_{$node_type}", TRUE);
+    }
+  }
+}
+
+
+/**
+ * Implements hook_node_presave().
+ */
+function vinculum_node_presave($node) {
+  // Only send ref-backs if the node is published, and has 'Send ref-backs'
+  // checked.
+  if ($node->status == NODE_PUBLISHED && !empty($node->vinculum_send)) {
+    // Check the node content for links; compare the links with the ref-backs
+    // previously sent.  If there are new links which have not already been
+    // sent, attach these to the node at $node->vinculum_new_refbacks.
+    $all_links = vinculum_get_external_links($node);
+
+    // @TODO: compare the ref-backs in this list with ref-backs already sent.
+    $new_links = $all_links;
+
+    $node->vinculum_new_refbacks = $new_links;
+  }
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function vinculum_node_insert($node) {
+  // Save the configuration.
+  _vinculum_node_save_settings($node);
+
+  // Send ref-backs if required.
+  if (!empty($node->vinculum_new_refbacks)) {
+    vinculum_send_refbacks($node->vinculum_new_refbacks, $node);
+  }
+}
+
+/**
+ * Implements hook_node_update().
+ */
+function vinculum_node_update($node) {
+  // Save the configuration.
+  _vinculum_node_save_settings($node);
+
+  // Send ref-backs if required.
+  if (!empty($node->vinculum_new_refbacks)) {
+    vinculum_send_refbacks($node->vinculum_new_refbacks, $node);
+  }
+}
+
+
+
+/**
+ * Implements hook_vinculum_get_external_links().
+ * Gets all the URLs found in the body field of a node.
+ *
+ * @return Array
+ * A list of external links found within the BODY field.
+ */
+function vinculum_vinculum_get_external_links($node) {
+  $text = _vinculum_extract_text($node);
+  return _vinculum_extract_urls($text);
+}
+
+/**
+ * Implements hook_vinculum_link_send_alter().
+ *
+ * Hook function provided on behalf of core's path functionality to support
+ * URL aliases for nodes.
+ */
+function vinculum_vinculum_link_send_alter(&$links, $node) {
+  foreach ($links as $key => $record) {
+    $language = (isset($node->language)) ? $node->language : LANGUAGE_NONE;
+    if ($url = drupal_lookup_path('alias', $record->source, $language)) {
+      $links[$key]->source = $url;
+    }
+  }
+}
+
+/**
+ * Implements hook_vinculum_received_validate().
+ */
+function vinculum_vinculum_received_validate(VinculumReceived $vinculum) {
+  // Validate the node exists, is published, and permits ref-backs.
+  $node = node_load($vinculum->nid);
+  if (empty($node)) {
+    return array(VINCULUM_ERROR_LOCAL_NODE_NOT_FOUND, 'Target for ref-back not found.');
+  }
+  elseif (!vinculum_node_allows_vinculum($node, 'receive')) {
+    return array(VINCULUM_ERROR_LOCAL_NODE_REFBACK_NOT_ALLOWED, 'The target does not permit ref-backs.');
+  }
+  elseif (vinculum_is_received($vinculum->nid, $vinculum->url)) {
+    return array(VINCULUM_ERROR_REFBACK_ALREADY_REGISTERED, 'The ref-back has already been registered.');
+  }
+}
+
+
+/**
+ * Implements hook_vinculum_received_presave().
+ */
+function vinculum_vinculum_received_presave(VinculumReceived $vinculum) {
+  if (empty($vinculum->title) || empty($vinculum->excerpt)) {
+    // Populate title and excerpt if possible.
+    if ($data = _vinculum__extract_title_and_excerpt($vinculum)) {
+      list ($title, $excerpt) = $data;
+      $vinculum->title   = $vinculum->title ?: $title;
+      $vinculum->excerpt = $vinculum->excerpt ?: $excerpt;
+    }
+    else {
+      // If the title couldn't be extracted programmatically, set the title to
+      // match the URL.
+      $vinculum->title = $vinculum->url;
+    }
+  }
+}
+
+
+
+/**********************************************************
+ * Public API functions.
+ *********************************************************/
+// 
+// /**
+//  * Register the receipt of a vinculum.
+//  *
+//  * If the vinculum has not been validated, this function will call the
+//  * validation handlers.
+//  * This function will trigger vinculum actions (such as add-comment) when a
+//  * vinculum has been successfully validated.
+//  *
+//  * @param Object $vinculum A vinculum object.
+//  *
+//  * @return Int
+//  * 0 is returned if the vinculum was successfully added.
+//  * A positive numeric error-code is returned if the vinculum was declined (e.g.
+//  * the vinculum already exists, or an anti-spam module prevented the pingback,
+//  * etc).
+//  *
+//  * @see vinculum_validation_error_codes
+//  */
+// function vinculum_receive(vinculum $vinculum) {
+// 
+//   // Validate the vinculum request, if it's not already validated.
+//   if (empty($vinculum->validated)) {
+//     $validation_result = vinculum_receive_validate($vinculum);
+// 
+//     // If it's invalid, abort here.
+//     if (!$validation_result == VINCULUM_VALIDATES) {
+//       return $validation_result;
+//     }
+//   }
+// 
+//   // Write an entry in the vinculum tracker table.
+//   db_merge('node_vinculum_received')
+//     ->key(array(
+//       'nid' => $vinculum->nid,
+//       'url' => $vinculum->url,
+//       ))
+//     ->fields(array(
+//       'handler'   => $vinculum->handler,
+//       'origin_ip' => $vinculum->origin_ip,
+//       'timestamp' => $vinculum->timestamp,
+//     ))
+//     ->execute();
+// 
+//   // Fire hook_vinculum_received_action().
+//   // Actions are implemented through:
+//   // - vinculum_trigger - supports the core trigger module.
+//   // - vinculum_rules - integrates with the rules module.
+//   module_invoke_all('vinculum_received_action', $vinculum);
+// 
+// }
+
+// 
+// /**
+//  * Validate the receipt of a vinculum.
+//  *
+//  * @param Object $vinculum A vinculum object.
+//  *
+//  * @return Int
+//  * 0 is returned if the vinculum validates.
+//  * A positive numeric error-code is returned if the vinculum validation fails
+//  * (e.g. the vinculum already exists, or an anti-spam module prevented the
+//  * pingback, etc).
+//  *
+//  * @see vinculum_validation_error_codes
+//  */
+// function vinculum_receive_validate(vinculum $vinculum) {
+//   // Validate that the node accepts pingbacks.
+//   $node = node_load($vinculum->nid);
+//   if (!$node) {
+//     return VINCULUM_ERROR_LOCAL_NODE_NOT_FOUND;
+//   }
+//   // Check that the node permits vinculums.
+//   elseif (!vinculum_node_allows_vinculum($node, 'receive')) {
+//     return VINCULUM_ERROR_LOCAL_NODE_VINCULUM_NOT_ALLOWED;
+//   }
+//   // Check that the vinculum isn't already registered.
+//   elseif (vinculum_is_received($vinculum->nid, $vinculum->url)) {
+//     return VINCULUM_ERROR_VINCULUM_ALREADY_REGISTERED;
+//   }
+// 
+//   // Optional validation:
+//   // Validate that the remote URL is reachable and links to the referenced
+//   // node.
+//   if (variable_get('vinculum_validate_remote_pages', FALSE)) {
+//     // Validate that the remote node is reachable.
+//     $result = drupal_http_request($vinculum->url);
+// 
+//     // Treat all HTTP errors (inc Forbidden) as remote URL not found.
+//     if ($result->error) {
+//       return VINCULUM_ERROR_REMOTE_URL_NOT_FOUND;
+//     }
+// 
+//     // Check the content for a link to the local node.
+//     $content = $result->data;
+//     // Extract all the URLs from the page content.
+//     $urls = _vinculum_extract_urls($content);
+//     $matched = FALSE;
+//     foreach ($urls as $url) {
+//       if ($nid = vinculum_lookup_nid($url)) {
+//         $matched = TRUE;
+//         break;
+//       }
+//     }
+//     if (!$matched) {
+//       return VINCULUM_ERROR_REMOTE_URL_MISSING_LINK;
+//     }
+//   }
+// 
+//   // @TODO: Allow other modules to add their own validation routines.
+// 
+//   return VINCULUM_VALIDATES;
+// }
+
+/**
+ * Check if a node allows vinculum operations.
+ *
+ * @param Object $node
+ * The node to check.
+ * @param String $op
+ * One of:
+ * - send
+ * - receive
+ *
+ * @return Boolean
+ */
+function vinculum_node_allows_vinculum($node, $op) {
+  // Both send and receive ops depend on the node allowing anonymous access.
+  if (!node_access('view', $node, drupal_anonymous_user())) {
+    return FALSE;
+  }
+
+  switch ($op) {
+    case 'send':
+      return isset($node->vinculum_send) ? $node->vinculum_send : variable_get("vinculum_send_{$node->type}", TRUE);
+
+    case 'receive':
+      return isset($node->vinculum_receive) ? $node->vinculum_receive : variable_get("vinculum_receive_{$node->type}", TRUE);
+  }
+}
+
+/**
+ * Get a list of external links from a node.
+ *
+ * This invokes hook_vinculum_get_external_links.
+ * By default, the vinculum module checks only the BODY field.  Create an
+ * implementation of hook_vinculum_get_external_links() to check other fields.
+ *
+ * @param Object $node
+ * The node to check.
+ *
+ * @return array
+ * An array of external link URLs.
+ */
+function vinculum_get_external_links($node) {
+  $links = module_invoke_all('vinculum_get_external_links', $node);
+
+  // Remove duplicate links.
+  $links = array_unique($links);
+
+  return $links;
+}
+
+
+/**
+ * Invoke vinculum handlers on each external link to record a vinculum.
+ *
+ * @param Array $links
+ * An array of external URLs.
+ */
+function vinculum_send_refbacks($links, $node) {
+  
+  // The initial source URL is defined as node/xxx.
+  // Other modules can alter this through hook_vinculum_link_send_alter if
+  // necessary (for example, to assign a canonical or alternative URL).
+  $source = "node/{$node->nid}";
+
+  // Build up a list of vinculum records for altering.
+  $records = array();
+  foreach ($links as $link) {
+    $records[$link] = (object) array(
+      'source' => $source,
+      'target' => $link,
+    );
+  }
+
+  // Invoke hook_vinculum_link_send_alter().
+  // Allow other modules to change the source/target URLs before sending
+  // vinculums (the node property is unalterable here).
+  drupal_alter('vinculum_link_send', $records, $node);
+
+  foreach ($records as $record) {
+    $source = url($record->source, array('absolute' => TRUE));
+    vinculum_send_single_vinculum($source, $record->target, $node);
+
+    // if (!vinculum_is_sent($node->nid, $record->target)) {
+
+    // }
+  }
+}
+
+/**
+ * Invoke vinculum handlers to send a vinculum.
+ *
+ * @param String $source
+ * The canonical URL of the local node.
+ * @param String $target
+ * The URL of the remote page.
+ * @param Object $node
+ * The local node object.
+ *
+ * @return Boolean
+ * TRUE if the remote server accepts the vinculum request.
+ */
+function vinculum_send_single_vinculum($source, $target, $node) {
+  // Record the timestamp of this attempt in the {node_vinculum_sent} table.
+  // This allows vinculums which have not been successful to be re-attempted
+  // periodically.
+  db_merge('node_vinculum_sent')
+    ->key(array(
+      'nid' => $node->nid,
+      'url' => $target,
+      ))
+    ->fields(array(
+      'timestamp' => time(),
+    ))
+    ->execute();
+
+  $handlers = vinculum_get_handler();
+  foreach ($handlers as $handler) {
+    // Invoke hook_vinculum_send().
+    $callback = $handler->module . '_vinculum_send';
+
+    // Ensure the function exists before attempting to call it.
+    if (!function_exists($callback)) {
+      continue;
+    }
+    $success = $callback($target, $source, $node);
+
+    // If the handler reports success, log this as a successful request.
+    if ($success) {
+      $params = array(
+        '%target'     => $target,
+        '@node_url'   => url("node/{$node->nid}"),
+        '%node_title' => $node->title,
+        '%handler'    => $handler->module,
+      );
+      watchdog('Vinculum', 'Vinculum sent to %target for node <a href="@node_url">%node_title</a> using %handler.', $params, WATCHDOG_DEBUG);
+
+      db_merge('node_vinculum_sent')
+        ->key(array(
+          'nid' => $node->nid,
+          'url' => $target,
+          ))
+        ->fields(array(
+          'handler' => $handler->module,
+        ))
+        ->execute();
+      // Stop at the first successful handler.
+      return TRUE;
+    }
+  }
+
+  $params = array(
+    '%target'     => $target,
+    '@node_url'   => url("node/{$node->nid}"),
+    '%node_title' => $node->title,
+  );
+  watchdog('Vinculum', 'Ref-backs could not be sent to %target for node <a href="@node_url">%node_title</a> - no ref-back handler was found.', $params, WATCHDOG_DEBUG);
+  return FALSE;
+}
+
+
+/**
+ * Fetch the node nid from a local URL.
+ *
+ * Handles standard drupal paths such as node/1 and drupal aliases.
+ *
+ * @param String $url
+ * The URL of a node on this site.
+ *
+ * @return Int|FALSE
+ * The node nid (if a match for the URL is found), or FALSE.
+ */
+function vinculum_lookup_nid($url) {
+  // Strip the domain from the URL (if present).
+  if (preg_match('#^(https?://[^/]+/).*#', $url, $matches)) {
+    $url = drupal_substr($url, drupal_strlen($matches[1]));
+  }
+
+  // Lookup URL aliases.
+  if ($local_path = drupal_lookup_path('source', $url)) {
+    $url = $local_path;
+  }
+
+  if (preg_match('#^node/(\d+)$#', $url, $matches)) {
+    return (int) $matches[1];
+  }
+  return FALSE;
+}
+
+/**
+ * Check if a vinculum has already been received for a particular node/URL.
+ *
+ * @param Int $nid
+ * The node nid.
+ * @param String $url
+ * The URL of the external site.
+ *
+ * @return Boolean
+ * TRUE if the vinculum has already been registered.
+ */
+function vinculum_is_received($nid, $url) {
+  $result = db_select('node_vinculum_received', 'nlr', array('target' => 'slave'))
+    ->fields('nlr', array('nid'))
+    ->condition("nlr.nid", $nid)
+    ->condition("nlr.url", $url)
+    ->execute()
+    ->fetchField();
+  return (bool) $result;
+}
+
+/**
+ * Check if a vinculum has already been sent for a particular node/URL.
+ *
+ * @param Int $nid
+ * The node nid.
+ * @param String $url
+ * The URL of the external site.
+ *
+ * @return Boolean
+ * TRUE if the vinculum has already been sent.
+ */
+function vinculum_is_sent($nid, $url) {
+  $result = db_select('node_vinculum_sent', 'nls', array('target' => 'slave'))
+    ->fields('nls', array('nid'))
+    ->condition("nls.nid", $nid)
+    ->condition("nls.url", $url)
+    ->isNotNull('nls.handler')
+    ->execute()
+    ->fetchField();
+  return (bool) $result;
+}
+
+/**
+ * Get a list of vinculum-handlers and their attributes.
+ *
+ * @return Array
+ * An array of vinculum handler objects. Each handler has the properties:
+  * - module   The system-name of the module.
+  * - protocol The human-readable name of the vinculum protocol provided.
+  * - weight   The weight of the module.
+ */
+function vinculum_get_handler($handler = NULL) {
+  $handlers = vinculum_load_all_handlers();
+  if (is_null($handler)) {
+    return $handlers;
+  }
+  elseif (isset($handlers[$handler])) {
+    return $handlers[$handler];
+  }
+  else {
+    return NULL;
+  }
+}
+
+/**
+ * Fetch a list of all the vinculum handlers.
+ *
+ * @param optional Boolean $reset_cache
+ * Set to TRUE to force a relooad of the handlers from their hooks.
+ *
+ * @return Array
+ * A list of vinculum handlers, ordered according to the priority from most
+ * important to least. Each handler has the properties:
+ * - module   The system-name of the module.
+ * - protocol The human-readable name of the vinculum protocol provided.
+ * - weight   The weight of the module.
+ */
+function vinculum_load_all_handlers($reset_cache = FALSE) {
+  if (!($reset_cache) && $cache = cache_get('vinculum_handlers')) {
+    $handlers = $cache->data;
+  }
+  else {
+    // Invoke hook_vinculum_handler().
+    // module_invoke_all() will order the results by module-weight: no further
+    // sorting required.
+    $vinculum_handler_modules = module_implements('vinculum_handler');
+
+    $weights = _vinculum_get_module_weights($vinculum_handler_modules);
+    $handlers = array();
+    foreach ($vinculum_handler_modules as $module) {
+      $callback = "{$module}_vinculum_handler";
+
+      $handlers[$module] = (object) $callback();
+      $handlers[$module]->module = $module;
+      $handlers[$module]->weight = $weights[$module];
+    }
+    cache_set('vinculum_handlers', $handlers);
+  }
+
+  return $handlers;
+}
+
+/**
+ * Set the weights of modules.
+ *
+ * @param Array $weights
+ * Array of module weights, keyed by the system-name of the module.
+ */
+function vinculum_set_weights($weights) {
+  foreach ($weights as $module => $weight) {
+    _vinculum_set_weight($module, $weight);
+  }
+
+  // We need to rebuild the module-weight cache when this is called.
+  cache_clear_all('hook_info',         'cache_bootstrap');
+  cache_clear_all('module_implements', 'cache_bootstrap');
+  cache_clear_all('system_list',       'cache_bootstrap');
+  cache_clear_all('vinculum_handlers', 'cache');
+}
+
+
+
+/**********************************************************
+ * Private API handlers.
+ *********************************************************/
+
+/**
+ * Fetch the node-settings (whether send/receive is enabled) for one or more
+ * nodes.
+ *
+ * @param Int|Array $nids
+ * Either a single node nid, or an array of node nids.
+ *
+ * @return Array
+ * An array of settings objects (each with the properties 'nid', 'send' and
+ * 'receive'), indexed by node nid.
+ */
+function _vinculum_node_get_settings($nids) {
+  if (is_numeric($nids)) {
+    $nids = array($nids);
+  }
+
+  $result = db_select('node_vinculum_settings', 'nls', array('target' => 'slave'))
+    ->fields('nls', array('nid', 'send', 'receive'))
+    ->condition("nls.nid", $nids, 'IN')
+    ->execute()
+    ->fetchAllAssoc('nid');
+
+  return $result;
+}
+
+/**
+ * Save the vinculum-settings for a node, scan the node for links, and fire off
+ * vinculums as needed.
+ */
+function _vinculum_node_save_settings($node) {
+  // If a custom send/receive setting has not been provided, use the default
+  // setting for this node-type.
+  $settings = array(
+    'send'    => isset($node->vinculum_send)    ? (bool) $node->vinculum_send    : variable_get("vinculum_send_{$node->type}", TRUE),
+    'receive' => isset($node->vinculum_receive) ? (bool) $node->vinculum_receive : variable_get("vinculum_receive_{$node->type}", TRUE),
+  );
+
+  // Update the flags in {node_vinculum_settings}.
+  db_merge('node_vinculum_settings')
+    ->key(array(
+      'nid' => $node->nid,
+      ))
+    ->fields(array(
+      // Cast the booleans to an int, to match the db data-type.
+      'send'    => (int) $settings['send'],
+      'receive' => (int) $settings['receive'],
+    ))
+    ->execute();
+}
+
+/**
+ * Get the module-weights for a set of modules (used to fetch the weights of
+ * the vinculum-handler modules).
+ *
+ * @param Array $modules
+ * An array of module names.
+ *
+ * @return Array
+ * An array of module-weights, keyed by module name.
+ */
+function _vinculum_get_module_weights($modules) {
+  if (!is_array($modules) || empty($modules)) {
+    return array();
+  }
+
+  $result = db_select('system', 's', array('target' => 'slave'))
+    ->fields('s', array('name', 'weight'))
+    ->condition('s.type', 'module')
+    ->condition("s.name", $modules, 'IN')
+    ->orderBy('weight', 'ASC')
+    ->orderBy('filename', 'ASC')
+    ->execute()
+    ->fetchAllAssoc('name');
+
+  $weights = array();
+  foreach ($result as $module => $row) {
+    $weights[$module] = $row->weight;
+  }
+  return $weights;
+}
+
+/**
+ * Set the weight of a module.
+ *
+ * @param String $module
+ * The system name of the module.
+ * @param Int $weight
+ * The new weight to set.
+ */
+function _vinculum_set_weight($module, $weight) {
+  db_merge('system')
+    ->key(array(
+      'type' => 'module',
+      'name' => $module,
+      ))
+    ->fields(array(
+      'weight' => $weight
+    ))
+    ->execute();
+}
+
+/**
+ * Extract text from a single field-API field.
+ *
+ * @param Object $node
+ *   A drupal node.
+ *
+ * @return String
+ *   The text found in the node's body field.
+ */
+function _vinculum_extract_text($node) {
+  $langcode = field_language('node', $node, 'body');
+
+  // If body is empty, abort early.
+  if (!isset($node->body[$langcode][0])) {
+    return '';
+  }
+
+  $item = $node->body[$langcode][0];
+
+  // Use the API to generate a renderable array.  This allows all the regular
+  // field-alter hooks to fire, so we get the same text as it would be rendered
+  // on the page.
+  $field = field_view_value('node', $node, 'body', $item);
+  $text = drupal_render($field);
+
+  return $text;
+}
+
+/**
+ * Extract all the external URLs from a single string.
+ */
+function _vinculum_extract_urls($text) {
+  // Check for the href value of explicit <a> tags, and remove the text found
+  // within the <a> tags (because the "Convert URLs into links" filter may
+  // shorten <a> text, making uniqueness difficult).
+  $pattern = "#<a [^>]*?href=([\"'])([^\\1]+?)\\1[^>]*?>.*?</a>#ms";
+  preg_match_all($pattern, $text, $matches);
+
+  // Matches:
+  // 0 = The full <a>...</a> tag.
+  // 1 = The initial quote mark (used purely for back-referencing)
+  // 2 = The value of the href attribute.
+  $links = $matches[2];
+
+  // Remove the <a>...</a> tags which have just been captured.
+  $text = preg_replace($pattern, '', $text);
+
+  // Regexp is stolen from trackback.module ;)
+  preg_match_all("/(http|https):\/\/[a-zA-Z0-9@:%_~#?&=.,\/;-]*[a-zA-Z0-9@:%_~#&=\/;-]/", $text, $matches);
+
+  // TODO: check that the URLs are external, and not local FQDN?
+
+  $links = array_merge($links, $matches[0]);
+  return array_unique($links);
+}
+
+/**
+ * Query a URL to attempt to extract a title and excerpt.
+ */
+function _vinculum__extract_title_and_excerpt($url) {
+  // Attempt to query the URL.
+  if ($response = drupal_http_request($url, array('headers' => array('User-Agent' => VINCULUM_UA)))) {
+    if (empty($response->error) and $response->code == 200) {
+      return _vinculum__parse_content($response->data);
+    }
+  }
+  return FALSE;
+}
+
+/**
+ * Parse HTML to attempt to extract a title and excerpt.
+ */
+function _vinculum__parse_content($html) {
+  $title = $excerpt = '';
+  // Look for a title tag in the HTML.
+  if (preg_match('#<title>(+*?)</title>#', $html, $matches)) {
+    $title = $matches[1];
+  }
+  return array($title, $excerpt);
+}

@@ -1,0 +1,7 @@
+name = Vinculum UI
+description = User-interface to configure ref-backs.
+core = 7.x
+package = Vinculum
+
+dependencies[] = vinculum
+configure = admin/config/content/vinculum

@@ -1,0 +1,220 @@
+<?php
+/**
+ * @file
+ * Install functions for the Vinculum module.
+ */
+
+
+/**
+ * Implements hook_requirements.
+ */
+function vinculum_requirements($phase) {
+  $requirements = array();
+  switch ($phase) {
+    case 'runtime':
+      // Vinculum is an API which requires at least one handler.
+      $handlers = vinculum_get_handler();
+      $requirements['vinculum'] = array(
+        'title' => t('Vinculum API handlers'), 
+        'value' => format_plural(count($handlers), '@count handler', '@count handlers'),
+      );
+
+      if (empty($handlers)) {
+        $requirements['vinculum'] += array(
+          'description' => t('Vinculum requires at least one enabled handler-module to function correctly.'),
+          'severity'    => REQUIREMENT_ERROR,
+        );
+      }
+      else {
+        $requirements['vinculum']['severity'] = REQUIREMENT_OK;
+      }
+      break;
+  }
+  return $requirements;
+}
+
+/**
+ * Implements hook_schema().
+ */
+function vinculum_schema() {
+
+  // Provide the DB tables:
+  // - node_vinculum_settings Flags which show if vinculum send/receive is
+  //                          enabled for a given node.
+  // - node_vinculum_sent     A list of the vinculums which have already been
+  //                          sent for a given node.
+  // - node_vinculum_received A list of the vinculums which have been received
+  //                          for a given node.
+
+  $schema = array();
+
+  $schema['node_vinculum_settings'] = array(
+    'description' => 'Flags which show if vinculum send/receive is enabled for a given node.',
+    'fields' => array(
+      'nid' => array(
+        'description' => 'The {node}.nid this record affects.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'send' => array(
+        'description' => 'Flag if the node may send pingbacks',
+        'type' => 'int',
+        'size' => 'tiny',
+        'default' => 1,
+      ),
+      'receive' => array(
+        'description' => 'Flag if the node may receive pingbacks',
+        'type' => 'int',
+        'size' => 'tiny',
+        'default' => 1,
+      ),
+    ),
+    'indexes' => array(
+      'nid' => array('nid'),
+    ),
+    'foreign keys' => array(
+      'node' => array(
+        'table' => 'node', 
+        'columns' => array('nid' => 'nid'),
+      ),
+    ),
+  );
+
+  $schema['node_vinculum_sent'] = array(
+    'description' => 'A list of the vinculums which have already been sent for a given node.',
+    'fields' => array(
+      'id' => array(
+        'description' => 'The unique ID for this ref-back received record.',
+        'type' => 'serial', 
+        'unsigned' => TRUE, 
+        'not null' => TRUE,
+      ),
+      'nid' => array(
+        'description' => 'The {node}.nid for this record.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'url' => array(
+        'description' => 'The third-party URL',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => '',
+      ),
+      'handler' => array(
+        'description' => "The vinculum handler (i.e. the module's name) which reported success.",
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'timestamp' => array(
+        'description' => 'The Unix timestamp when the vinculum was most recently attempted.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'indexes' => array(
+      'nid' => array('nid'),
+      'nid_url' => array('nid', 'url'),
+    ),
+    'foreign keys' => array(
+      'node' => array(
+        'table' => 'node', 
+        'columns' => array('nid' => 'nid'),
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+
+
+  $schema['node_vinculum_received'] = array(
+    'description' => 'A list of the vinculums which have been received for a given node.',
+    'fields' => array(
+      'id' => array(
+        'description' => 'The unique ID for this ref-back received record.',
+        'type' => 'serial', 
+        'unsigned' => TRUE, 
+        'not null' => TRUE,
+      ),
+      'nid' => array(
+        'description' => 'The {node}.nid for this record.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'url' => array(
+        'description' => 'The URL of the remote site',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => '',
+      ),
+      'title' => array(
+        'description' => "Title of the third-party's post",
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => '',
+      ),
+      'excerpt' => array(
+        'description' => "Excerpt of the third-party's post",
+        'type' => 'text',
+      ),
+      'handler' => array(
+        'description' => 'The handler (module) which reported the ref-back (e.g. pingback, trackback, etc).',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'handler_metadata' => array(
+        'description' => 'Additional meta-data provided by the handler.',
+        'serialized' => TRUE,
+        'type' => 'text',
+        'default' => NULL,
+      ),
+      'origin_ip' => array(
+        'description' => 'Identifier of the origin, such as an IP address or hostname.',
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => '',
+      ),
+      'timestamp' => array(
+        'description' => 'The Unix timestamp when the vinculum was received.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'indexes' => array(
+      'nid' => array('nid'),
+      'nid_url' => array('nid', 'url'),
+    ),
+    'foreign keys' => array(
+      'node' => array(
+        'table' => 'node', 
+        'columns' => array('nid' => 'nid'),
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+
+  return $schema;
+}
+
+
+/**
+ * Implements hook_uninstall().
+ */
+function vinculum_uninstall() {
+  // Query the variables-table for a list of all variables provided by the
+  // vinculum module.
+  // Find all variables prefixed by 'views_block_cache_optimizer'.
+  $variables = db_query("SELECT name from {variable} WHERE name like 'vinculum%'")
+    ->fetchCol();
+  foreach ($variables as $variable) {
+    variable_del($variable);
+  }
+}

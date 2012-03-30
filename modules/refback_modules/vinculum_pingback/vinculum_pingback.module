@@ -1,0 +1,144 @@
+<?php
+/**
+ * @file
+ *
+ * Specification document: http://www.hixie.ch/specs/pingback/pingback-1.0
+ */
+
+/**
+ * Implements hook_vinculum_handler().
+ */
+function vinculum_pingback_vinculum_handler() {
+  return array(
+    'protocol' => t('Pingback'),
+  );
+}
+
+/**
+ * Implements hook_node_view().
+ *
+ * Adds a HTTP header and a <link> tag which give the pingback server endpoint
+ * URL.
+ */
+function vinculum_pingback_node_view($node, $view_mode, $langcode) {
+  // @TODO: configurable view-modes?
+  if ($view_mode == 'full' && vinculum_node_allows_vinculum($node, 'receive')) {
+    // The end-point URL is the standard drupal XML-RPC end-point.
+    $pingback_endpoint = url(NULL, array('absolute' => TRUE)) . 'xmlrpc.php';
+
+    // Add both a HTTP header and a <link> tag.
+    drupal_add_http_header('X-Pingback', $pingback_endpoint);
+    drupal_add_html_head_link(array('rel' => 'pingback', 'href' => $pingback_endpoint));
+  }
+}
+
+/**
+ * Implements hook_xmlrpc().
+ *
+ * This XML-RPC endpoint handles registration of incoming pingback requests.
+ */
+function vinculum_pingback_xmlrpc() {
+  return array(
+    array(
+      'pingback.ping',
+      'vinculum_pingback__receive_pingback',
+      // Return value is a string.
+      // There are 2 string parameters.
+      array('string', 'string', 'string'),
+      t('Handles pingback pings.'),
+    ),
+  );
+}
+
+/**
+ * XML-RPC callback for the pingback.ping method.
+ *
+ * @param String $sourceURI
+ * The URL of the third-party post.
+ * @param String $targetURI
+ * The URL of the node on this site.
+ */
+function vinculum_pingback__receive_pingback($sourceURI, $targetURI) {
+  // The pingback protocol defines a static schema of 2 fields: sourceURI and
+  // targetURI. No other data may be exchanged within the pingback protocol.
+
+  // Attempt to create a Vinculum entity.
+  $vinculum = new VinculumReceived(array(
+    'handler'  => 'vinculum_pingback',
+    'localUrl' => $targetURI,
+    'url'      => $sourceURI,
+  ));
+
+  if ($result = $vinculum->save()) {
+    // Successful: provide a meaningful response.
+    if ($result == SAVED_NEW) {
+      $message = t('Pingback from @source to @target registered.', array('@source' => $sourceURI, '@target' => $targetURI));
+    }
+    elseif ($result == SAVED_UPDATED){
+      $message = t('Pingback from @source to @target updated.', array('@source' => $sourceURI, '@target' => $targetURI));
+    }
+    return $message;
+  }
+  else {
+    // Lookup the error message from the error-code, and return an xmlrpc error.
+    list ($error_code, $error_message) = _vinculum_pingback__protocol_errors($vinculum->last_error_code);
+    return xmlrpc_server_error($error_code, $error_message);
+  }
+}
+
+
+/**
+ * Implements hook_vinculum_send().
+ *
+ * Attempt to send a pingback.  The pingback protocol uses a simple static
+ * schema: only the origin and target URLs are used.
+ *
+ * @param String $target
+ * The remote URL.
+ * @param String $source
+ * The URL of the local node.
+ * @param Object $node
+ * The drupal node.
+ *
+ * @ingroup vinculum
+ */
+function vinculum_pingback_vinculum_send($target, $source, $node) {
+  return VinculumPingbackHandler::send($source, $target);
+}
+
+/**
+ * Lookup the correct pingback protocol-response for an error.
+ */
+function _vinculum_pingback__protocol_errors($error_code) {
+  // Error codes defined by the protocol documentation:
+  // 0
+  //     A generic fault code. Servers MAY use this error code instead of any of the others if they do not have a way of determining the correct fault code.
+  // 0×0010 (16)
+  //     The source URI does not exist.
+  // 0×0011 (17)
+  //     The source URI does not contain a link to the target URI, and so cannot be used as a source.
+  // 0×0020 (32)
+  //     The specified target URI does not exist. This MUST only be used when the target definitely does not exist, rather than when the target may exist but is not recognised. See the next error.
+  // 0×0021 (33)
+  //     The specified target URI cannot be used as a target. It either doesn't exist, or it is not a pingback-enabled resource. For example, on a blog, typically only permalinks are pingback-enabled, and trying to pingback the home page, or a set of posts, will fail with this error.
+  // 0×0030 (48)
+  //     The pingback has already been registered.
+  // 0×0031 (49)
+  //     Access denied.
+  // 0×0032 (50)
+  //     The server could not communicate with an upstream server, or received an error from an upstream server, and therefore could not complete the request. This is similar to HTTP's 402 Bad Gateway error. This error SHOULD be used by pingback proxies when propagating errors.
+
+  switch ($error_code) {
+    case VINCULUM_ERROR_LOCAL_NODE_NOT_FOUND:
+      return array(0x0020, 'The specified target URI does not exist.');
+
+    case VINCULUM_ERROR_LOCAL_NODE_REFBACK_NOT_ALLOWED:
+      return array(0x0021, 'The specified target URI cannot be used as a target.');
+
+    case VINCULUM_ERROR_REFBACK_ALREADY_REGISTERED:
+      return array(0x0030, 'The pingback has already been registered.');
+
+    default:
+      return array(0, 'An error occurred trying to register the pingback. The pingback was not registered.');
+  }
+}
