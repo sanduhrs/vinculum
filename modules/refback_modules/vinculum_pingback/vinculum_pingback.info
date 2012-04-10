@@ -1,7 +1,7 @@
 name = Vinculum handler - Pingback
 description = Provides the Pingback protocol for the Vinculum module.
-package = Vinculum
 core = 7.x
+package = Vinculum
 dependencies[] = vinculum
 files[] = vinculum_pingback.class.inc
 files[] = vinculum_pingback.test
