@@ -1,0 +1,8 @@
+name = Vinculum handler - Trackback
+description = Provides the Trackback protocol for the Vinculum module.
+core = 7.x
+package = Vinculum
+dependencies[] = vinculum
+files[] = vinculum_trackback.class.inc
+
+;files[] = vinculum_trackback.test

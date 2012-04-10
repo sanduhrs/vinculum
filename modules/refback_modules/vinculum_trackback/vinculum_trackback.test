@@ -1,0 +1,43 @@
+<?php
+/**
+ * @file
+ * Tests for the vinculum trackback module.
+ */
+
+/**
+ * Test the idempotent functions of the VinculumTrackbackHandler class:
+ * - discoverEndpointInHTML($html)
+ * - stripCommentTags($html)
+ * - cleanupHTML($html)
+ *   (requires filter module)
+ * - generateUniqueXmlPrefixes($namespaces)
+ * - parseRemoteServerResponseForErrors($html)
+ */
+class VinculumTrackbackHandlerIdempotentTestCase extends DrupalUnitTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'VinculumTrackbackHandler internal methods',
+      'description' => 'Test the static idempotent functions of the VinculumTrackbackHandler class.',
+      'group' => 'Vinculum',
+    );
+  }
+}
+
+/**
+ * Test the drupal-dependent functions of the VinculumTrackbackHandler class:
+ * - sendTrackpack($endpoint, $params)
+ * - getEndpoint($url)
+ * - urlMimeTypeIsTextBased($url)
+ */
+class VinculumTrackbackHandlerDrupalTestCase extends DrupalWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'VinculumTrackbackHandler primary API methods',
+      'description' => 'Test the drupal state-dependent functions of the VinculumTrackbackHandler class.',
+      'group' => 'Vinculum',
+    );
+  }
+}
+
