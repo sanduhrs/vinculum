@@ -1,7 +1,9 @@
 <?php
 /**
  * @file
- * Parse pingback information.
+ * Class handler provides the tools to:
+ * - Send a pingback.
+ * - Discover if a URL provides pingback, and look up the XML-RPC endpoint.
  */
 
 
