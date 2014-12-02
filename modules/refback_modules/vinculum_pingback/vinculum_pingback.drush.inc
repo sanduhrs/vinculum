@@ -1,5 +1,6 @@
 <?php
 /**
+ * @file
  * Drush integration for pingback.
  */
 
@@ -18,8 +19,7 @@ function vinculum_pingback_drush_command() {
       'target' => "The URL to send the pingback to.",
     ),
     'examples' => array(
-      'drush vinculum-send-pingback 45 http://example.com/blog/2011/11/09/foo' =>
-        "Send a pingback from node 45 to http://example.com/blog/2011/11/09/foo.",
+      'drush vinculum-send-pingback 45 http://example.com/blog/2011/11/09/foo' => "Send a pingback from node 45 to http://example.com/blog/2011/11/09/foo.",
     ),
   );
 
@@ -31,8 +31,7 @@ function vinculum_pingback_drush_command() {
       'source' => "The URL that sent the pingback.",
     ),
     'examples' => array(
-      'drush vinculum-receive-pingback 45 http://example.com/blog/2011/11/09/foo' =>
-        "Receive a pingback on node 45 from http://example.com/blog/2011/11/09/foo.",
+      'drush vinculum-receive-pingback 45 http://example.com/blog/2011/11/09/foo' => "Receive a pingback on node 45 from http://example.com/blog/2011/11/09/foo.",
     ),
   );
 

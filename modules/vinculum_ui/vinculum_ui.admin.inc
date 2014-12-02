@@ -18,7 +18,6 @@ function vinculum_ui__settings_form($form) {
     '#default_value' => variable_get('vinculum_validate_remote_pages', FALSE),
   );
 
-
   // Fetch a list of the available handlers (and reset the  handler-cache to
   // ensure that this page always lists the current handler-set).
   //
@@ -41,7 +40,6 @@ function vinculum_ui__settings_form($form) {
     );
   }
 
-
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
@@ -60,10 +58,9 @@ function vinculum_ui__settings_form_submit(&$form, &$form_state) {
   drupal_set_message(t('Your settings have been saved.'));
 }
 
-
-
 /**
  * Theme handler for the list of handlers on the vinculum configuration form.
+ *
  * This transforms the list of handlers into a draggable table.
  */
 function theme_vinculum_ui__settings_form__handlers_element($variables) {
@@ -92,14 +89,13 @@ function theme_vinculum_ui__settings_form__handlers_element($variables) {
     'header' => $header,
     'rows' => $rows,
     'attributes' => array('id' => 'vinculum-table'),
-    'empty' => t('There are no handlers available. Enable one or more vinculum handler modules.')
+    'empty' => t('There are no handlers available. Enable one or more vinculum handler modules.'),
   ));
   $output .= drupal_render_children($form);
   drupal_add_tabledrag('vinculum-table', 'order', 'sibling', 'vinculum-handler-weight');
 
   return $output;
 }
-
 
 /**
  * Report of all ref-backs sent.
@@ -111,7 +107,6 @@ function vinculum_ui__report_sent() {
     array('data' => t('Remote URL'), 'field' => 'url'),
     array('data' => t('Handler'),    'field' => 'handler'),
   );
-
 
   $query = db_select('node_vinculum_sent', 'l');
   $query->join('node', 'n', 'n.nid = l.nid');
@@ -136,23 +131,22 @@ function vinculum_ui__report_sent() {
   }
 
   $html = '';
-  $html .= theme('table', array('header' => $header, 'rows'=>$rows));
+  $html .= theme('table', array('header' => $header, 'rows' => $rows));
   $html .= theme('pager', array('tags' => array()));
   return $html;
 }
-
 
 /**
  * Report of all ref-backs received.
  */
 function vinculum_ui__report_received() {
   $header = array(
-    array('data' => t('Date'),       'field' => 'timestamp',  'sort' => 'desc'),
+    array(
+      'data' => t('Date'), 'field' => 'timestamp', 'sort' => 'desc'),
     array('data' => t('Content'),    'field' => 'n.title'),
     array('data' => t('Remote URL'), 'field' => 'url'),
     array('data' => t('Handler'),    'field' => 'handler'),
   );
-
 
   $query = db_select('node_vinculum_received', 'l');
   $query->join('node', 'n', 'n.nid = l.nid');
@@ -178,7 +172,7 @@ function vinculum_ui__report_received() {
   }
 
   $html = '';
-  $html .= theme('table', array('header' => $header, 'rows'=>$rows));
+  $html .= theme('table', array('header' => $header, 'rows' => $rows));
   $html .= theme('pager', array('tags' => array()));
   return $html;
 }

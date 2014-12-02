@@ -15,6 +15,9 @@
  */
 class VinculumTrackbackHandlerIdempotentTestCase extends DrupalUnitTestCase {
 
+  /**
+   * Get testcase info.
+   */
   public static function getInfo() {
     return array(
       'name' => 'VinculumTrackbackHandler internal methods',
@@ -26,12 +29,15 @@ class VinculumTrackbackHandlerIdempotentTestCase extends DrupalUnitTestCase {
 
 /**
  * Test the drupal-dependent functions of the VinculumTrackbackHandler class:
- * - sendTrackpack($endpoint, $params)
+ * - sendTrackback($endpoint, $params)
  * - getEndpoint($url)
  * - urlMimeTypeIsTextBased($url)
  */
 class VinculumTrackbackHandlerDrupalTestCase extends DrupalWebTestCase {
 
+  /**
+   * Get testcase info.
+   */
   public static function getInfo() {
     return array(
       'name' => 'VinculumTrackbackHandler primary API methods',
@@ -40,4 +46,3 @@ class VinculumTrackbackHandlerDrupalTestCase extends DrupalWebTestCase {
     );
   }
 }
-

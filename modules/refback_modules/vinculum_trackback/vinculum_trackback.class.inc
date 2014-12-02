@@ -14,30 +14,33 @@ class VinculumTrackbackHandler {
 
   // Minimum error-level to trigger a watchdog message.
   // Messages below this error-level will not be reported.
-  public static $watchdog_reporting_level = WATCHDOG_DEBUG;
+  public static $watchdogReportingLevel = WATCHDOG_DEBUG;
 
   /**
    * Send a trackback request.
    *
-   * @param String $remoteURL
-   * The absolute URL of the remote article.
-   * @param String $localURL
-   * The absolute URL of the local node.
-   * @param Array $params
-   * - title     String Title of the local node.
-   * - excerpt   String optional excerpt referencing the remote post.
-   * - blog_name String Name of this blog/website (defaults to site-name).
+   * @param string $remote_url
+   *   The absolute URL of the remote article.
+   * @param string $local_url
+   *   The absolute URL of the local node.
+   * @param array $params
+   *   - title
+   *     A string title of the local node.
+   *   - excerpt
+   *     An optional string excerpt referencing the remote post.
+   *   - blog_name
+   *     A string name of this blog/website (defaults to site-name).
    *
-   * @return Boolean
-   * TRUE  if the remote site reported success.
-   * FALSE if the remote site reported failure, or any other error occurred
-   *       (e.g. network error preventing the site from being reached).
+   * @return bool
+   *   TRUE if the remote site reported success.
+   *   FALSE if the remote site reported failure, or any other error occurred
+   *   (e.g., network error preventing the site from being reached).
    */
-  public function send($remoteURL, $localURL, $params) {
+  public function send($remote_url, $local_url, $params) {
     // $title, $excerpt = NULL, $blog_name = NULL.
-    if ($endpoint = self::getEndpoint($remoteURL)) {
-      $params['url'] = $localURL;
-      return $self::sendTrackpack($endpoint, $params);
+    if ($endpoint = self::getEndpoint($remote_url)) {
+      $params['url'] = $local_url;
+      return $self::sendTrackback($endpoint, $params);
     }
   }
 
@@ -45,22 +48,26 @@ class VinculumTrackbackHandler {
   /**
    * Send a trackback request (notify a third-party site of a link).
    *
-   * @param String $endpoint_url
+   * @param string $endpoint
    *   The URL of the remote Trackback endpoint.
-   * @param Array $params
-   * - url       The URL of the local node (REQUIRED).
-   * - title     The title of the local node (optional).
-   * - excerpt   Excerpt from the local node (optional).
-   * - blog_name Name of the local site (optional; defaults to site-name).
+   * @param array $params
+   *   - url
+   *     The URL of the local node (REQUIRED).
+   *   - title
+   *     The title of the local node (optional).
+   *   - excerpt
+   *     Excerpt from the local node (optional).
+   *   - blog_name
+   *     Name of the local site (optional; defaults to site-name).
    *
-   * @return Boolean
-   * TRUE  if the remote site reported success.
-   * FALSE if the remote site reported failure, or any other error occurred
-   *       (e.g. network error preventing the site from being reached).
+   * @return bool
+   *   TRUE  if the remote site reported success.
+   *   FALSE if the remote site reported failure, or any other error occurred
+   *   (e.g., network error preventing the site from being reached).
    */
-  public function sendTrackpack($endpoint, $params) {
+  public function sendTrackback($endpoint, $params) {
     if (!is_array($params) || empty ($params['url'])) {
-      throw new Exception ("sendTrackpack() requires that \$params['url'] is provided");
+      throw new Exception("sendTrackback() requires that \$params['url'] is provided");
     }
 
     // Add default "blog_name" if it's not provided.
@@ -83,10 +90,10 @@ class VinculumTrackbackHandler {
 
     // Parse the remote server's response for any error messages.
     if ($result->data) {
-      $remoteErrors = self::parseRemoteServerResponse($result->data);
+      $remote_errors = self::parseRemoteServerResponse($result->data);
 
       // Log the error.
-      if (is_null($remoteErrors)) {
+      if (is_null($remote_errors)) {
         // The response could not be parsed.
         $params = array(
           '%url' => $endpoint_url,
@@ -94,21 +101,21 @@ class VinculumTrackbackHandler {
         );
         self::debug('Trackback response for endpoint %url could not be parsed as XML.<br />!verbose_output', $params, WATCHDOG_DEBUG);
       }
-      elseif (is_string($remoteErrors)) {
+      elseif (is_string($remote_errors)) {
         $params = array(
           '%url' => $endpoint_url,
-          '!verbose_output' => filter_xss(str_replace("\n", "<br />\n", htmlentities($remoteErrors))),
+          '!verbose_output' => filter_xss(str_replace("\n", "<br />\n", htmlentities($remote_errors))),
         );
         self::debug('Trackback failed for endpoint %url with the message:<br />!verbose_output', $params, WATCHDOG_DEBUG);
       }
-      elseif ($remoteErrors) {
+      elseif ($remote_errors) {
         $params = array(
           '%url' => $endpoint_url,
         );
         self::debug('Trackback failed for endpoint %url. No error message was provided.', $params, WATCHDOG_DEBUG);
       }
 
-      return ($remoteErrors === FALSE);
+      return ($remote_errors === FALSE);
     }
     return FALSE;
   }
@@ -116,20 +123,20 @@ class VinculumTrackbackHandler {
   /**
    * Get the URL of the endpoint that handles trackbacks for a URL.
    *
-   * @param String $url
-   * URL of the remote article
+   * @param string $url
+   *   URL of the remote article
    *
-   * @return String|FALSE
-   * Absolute URL of the endpoint, or FALSE if trackback is not supported.
+   * @return string|FALSE
+   *   Absolute URL of the endpoint, or FALSE if trackback is not supported.
    */
   public static function getEndpoint($url) {
     // Efficiency-check: HEAD the URL to lookup the mime-type; skip the full
     // auto-discovery if the content doesn't appear to be text.
     if (!$result == self::urlMimeTypeIsTextBased($url)) {
       // Possible return values from the helper:
-      // - TRUE:  the content *might* support Trackbacks.
-      // - FALSE: the content is unlikely to support Trackbacks.
-      // - NULL:  the remote site did not provide a valid response to a HTTP HEAD request.
+      // - TRUE:  content *might* support Trackbacks.
+      // - FALSE: content is unlikely to support Trackbacks.
+      // - NULL:  remote did not provide a valid response to a HEAD request.
       if (is_null($result)) {
         self::debug('Trackback auto-discovery not attempted: an error occurred when making a HEAD request for %url.', array('%url' => $url), WATCHDOG_DEBUG);
       }
@@ -140,14 +147,17 @@ class VinculumTrackbackHandler {
       return FALSE;
     }
 
-
     // Auto-discovery steps.
-    // From http://www.sixapart.com/pronet/docs/trackback_spec#Auto-Discovery_of_TrackBack_Ping_URLs:
+    // @see http://www.sixapart.com/pronet/docs/trackback_spec#Auto-Discovery_of_TrackBack_Ping_URLs
     //
     // Given a URL my_url, clients should follow these steps:
-    //   1. Send an HTTP GET request to retrieve the contents of the page at my_url.
-    //   2. Scan the page contents for embedded RDF. Pages can contain multiple instances of embedded RDF--clients should pick the block whose dc:identifier matches my_url.
-    //   3. Extract the trackback:ping value from the block of RDF. This is the TrackBack Ping URL.
+    // 1. Send an HTTP GET request to retrieve the contents of the page
+    // at my_url.
+    // 2. Scan the page contents for embedded RDF. Pages can contain multiple
+    // instances of embedded RDF -- clients should pick the block whose
+    // dc:identifier matches my_url.
+    // 3. Extract the trackback:ping value from the block of RDF.
+    // This is the TrackBack Ping URL.
 
     // Request the third-party URL.
     $options = array(
@@ -165,7 +175,6 @@ class VinculumTrackbackHandler {
 
     // Test for Trackback endpoint RDF metadata within the page.
     $endpoints = self::discoverEndpointInHTML($result->data);
-
 
     // Pages might list multiple endpoints: use the endpoint whose identifier
     // matches the URL provided.
@@ -186,33 +195,32 @@ class VinculumTrackbackHandler {
   /**
    * Get the trackback-structured RDF metadata to provide auto-discovery.
    *
-   * @param String $localURL
-   * The absolute URL of the local page or node.
-   * @param String $endpointURL
-   * The trackback-handling endpoint for registering trackbacks using an XML
-   * call. For nodes, this is node/$nid/trackback.
-   * @param String $title
-   * The title of the page/node.
+   * @param string $local_url
+   *   The absolute URL of the local page or node.
+   * @param string $endpoint_url
+   *   The trackback-handling endpoint for registering trackbacks using an XML
+   *   call. For nodes, this is node/$nid/trackback.
+   * @param string $title
+   *   The title of the page/node.
    */
-  public static function buildTrackbackRDF($localURL, $endpointURL, $title) {
+  public static function buildTrackbackRDF($local_url, $endpoint_url, $title) {
     $rdf_text = "\n<!--\n";
     $rdf_text .= '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:trackback="http://madskills.com/public/xml/rss/module/trackback/">' . "\n";
     $rdf_text .= "\t" . '<rdf:Description';
-    $rdf_text .= ' rdf:about="' . $localURL . '"';
-    $rdf_text .= ' dc:identifier="' . $localURL . '"';
+    $rdf_text .= ' rdf:about="' . $local_url . '"';
+    $rdf_text .= ' dc:identifier="' . $local_url . '"';
     $rdf_text .= ' dc:title="' . strtr(check_plain($title), array('--' => '&mdash;')) . '"';
-    $rdf_text .= ' trackback:ping="' . $endpointURL . '" />' . "\n";
+    $rdf_text .= ' trackback:ping="' . $endpoint_url . '" />' . "\n";
     $rdf_text .= '</rdf:RDF>';
     $rdf_text .= "\n-->\n";
 
     return $rdf_text;
   }
 
-  
   /**
    * The response expected if a trackback succeeded.
    */
-  function getResponseSuccess() {
+  public function getResponseSuccess() {
     // The Trackback standard's response format for successful requests.
     $response = array();
 
@@ -231,11 +239,11 @@ class VinculumTrackbackHandler {
   /**
    * The response expected if a trackback failed.
    *
-   * @param String $failure_message
-   * Human-readable message to provide to the remote server to describe the
-   * error. For example "Trackback already registered".
+   * @param string $failure_message
+   *   Human-readable message to provide to the remote server to describe the
+   *   error. For example "Trackback already registered".
    */
-  function getResponseFailure($failure_message = NULL) {
+  public function getResponseFailure($failure_message = NULL) {
     if (is_null($failure_message)) {
       // Default message is *untranslated*.
       $failure_message = 'An unknown error occurred';
@@ -254,24 +262,20 @@ class VinculumTrackbackHandler {
     return implode("\n", $response);
   }
 
-
-
-
-
-
-
   /**
-   * HEAD the URL and inspect the mime-type to see if it appears to be text-
-   * based.
+   * HEAD the URL and inspect mime-type to see if it appears to be text-based.
    *
-   * @param String $url
-   * URL of the remote article.
+   * @param string $url
+   *   URL of the remote article.
    *
-   * @return Boolean|NULL
-   * - TRUE  if the URL was reached and might support Trackback auto-discovery.
-   * - FALSE if the URL was reached and is unlikely to support Trackback auto-
-   *         discovery.
-   * - NULL  if the URL could not be reached (for example, due to a 404 error).
+   * @return bool|NULL
+   *   - TRUE
+   *     if the URL was reached and might support Trackback auto-discovery.
+   *   - FALSE
+   *     if the URL was reached and is unlikely to support Trackback
+   *     auto-discovery.
+   *   - NULL
+   *     if the URL could not be reached (for example, due to a 404 error).
    */
   public static function urlMimeTypeIsTextBased($url) {
     $skip_test = variable_get('vinculum_trackback_autodiscovery_skip_efficiency_check', FALSE);
@@ -301,41 +305,26 @@ class VinculumTrackbackHandler {
     return $is_valid;
   }
 
-
-
   /**
-   * Extract the Trackback endpoints from a section of text (such as the contents
-   * of a web page).
+   * Extract the Trackback endpoints from a section of text.
    *
-   * @param String $html
+   * @param string $html
    *   The HTML to search
    *
-   * @return Array|NULL
+   * @return array|NULL
    *   Array of discovered trackback endpoints (where the key is the entity's
    *   identifier - i.e. the remote page's URL - and the value is the endpoint).
-   *   If no Trackback endpoints are discovered, an empty array will be returned.
-   *   If the html cannot be parsed, NULL is returned.
+   *   If no Trackback endpoints are discovered, an empty array will be
+   *   returned. If the html cannot be parsed, NULL is returned.
    */
-  function discoverEndpointInHTML($html) {
+  public function discoverEndpointInHTML($html) {
     $matches = array();
-
-    // Sample RDF:
-    // <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-    //          xmlns:dc="http://purl.org/dc/elements/1.1/"
-    //          xmlns:trackback="http://madskills.com/public/xml/rss/module/trackback/">
-    //   <rdf:Description
-    //      rdf:about="http://www.foo.com/archive.html#foo"
-    //      dc:identifier="http://www.foo.com/archive.html#foo"
-    //      dc:title="Foo Bar"
-    //      trackback:ping="http://www.foo.com/tb.cgi/5" />
-    // </rdf:RDF>
 
     // We need to match: RDF/Description[@ping and @identifier]
 
     // If RDF tags are wrapped in comment tags, remove the comment tags so the
-    // RDF tags can be parsed by SimpleXML
+    // RDF tags can be parsed by SimpleXML.
     $html = trim(self::stripCommentTags($html));
-
 
     $xml = @simplexml_load_string($html) or
     $xml = @simplexml_load_string(self::cleanupHTML($html));
@@ -359,9 +348,9 @@ class VinculumTrackbackHandler {
     $xml->registerXPathNamespace($p3, 'http://madskills.com/public/xml/rss/module/trackback/');
 
     if ($rdf_tags = $xml->xpath("//{$p1}:RDF/{$p1}:Description[@{$p2}:identifier and @{$p3}:ping]")) {
-      foreach($rdf_tags as $element) {
+      foreach ($rdf_tags as $element) {
         $identifier = (string) $element->attributes('http://purl.org/dc/elements/1.1/')->identifier;
-        $ping       = (string) $element->attributes('http://madskills.com/public/xml/rss/module/trackback/')->ping;
+        $ping = (string) $element->attributes('http://madskills.com/public/xml/rss/module/trackback/')->ping;
         $matches[$identifier] = $ping;
       }
     }
@@ -373,14 +362,14 @@ class VinculumTrackbackHandler {
    * Where RDF tags are wrapped by comment tags, remove the comment tags.
    */
   public static function stripCommentTags($html) {
-    // If RDF tags are found within a comment section, strip out the comment tags
-    // so the RDF can be parsed via SimpleXml.
+    // If RDF tags are found within a comment section, strip out the comment
+    // tags so the RDF can be parsed via SimpleXml.
 
     // Simply run every comment tag through a helper function.
     // The /m modifier indicates multi-line matching, and /s allows the dot [.]
-    //   character to include \n (the new-line character).
+    // character to include \n (the new-line character).
     // The ? character (in .*?) indicated non-greedy matching.
-    $html = preg_replace_callback('/<!--(.*?)-->/ms', 
+    $html = preg_replace_callback('/<!--(.*?)-->/ms',
       create_function(
         '$matches',
         'return preg_match("#<([^:]*:)?RDF\s#ms", $matches[1]) ? $matches[1] : "<!--" . $matches[1] . "-->";'
@@ -407,13 +396,14 @@ class VinculumTrackbackHandler {
   }
 
   /**
-   * Generate 3 unique namespace prefixes, to avoid collision with existing
-   * namespace prefixes.
+   * Generate 3 unique namespace prefixes.
    *
-   * @param Array $namespaces
-   *  Array of current namespaces in use (see SimpleXMLElement::getNamespaces).
+   * To avoid collision with existing namespace prefixes.
    *
-   * @return Array
+   * @param array $namespaces
+   *   Array of current namespaces in use (see SimpleXMLElement::getNamespaces).
+   *
+   * @return array
    *   An array of 3 unique 5-character namespace prefixes.
    */
   public static function generateUniqueXmlPrefixes($namespaces) {
@@ -424,11 +414,11 @@ class VinculumTrackbackHandler {
     $new_prefixes = array();
     $prefixes = array_keys($namespaces);
     while (count($new_prefixes) < 3) {
-      $prefix = $character_set[rand(0,25)]
-              . $character_set[rand(0,25)]
-              . $character_set[rand(0,25)]
-              . $character_set[rand(0,25)]
-              . $character_set[rand(0,25)];
+      $prefix = $character_set[rand(0, 25)]
+              . $character_set[rand(0, 25)]
+              . $character_set[rand(0, 25)]
+              . $character_set[rand(0, 25)]
+              . $character_set[rand(0, 25)];
       if (!(in_array($prefix, $prefixes) || in_array($prefix, $new_prefixes))) {
         $new_prefixes[] = $prefix;
       }
@@ -436,21 +426,23 @@ class VinculumTrackbackHandler {
     return $new_prefixes;
   }
 
-
-
-  
   /**
-   * Parse the response from a trackback endpoint, and report if the response is
-   * an error (and any message, if provided).
+   * Parse the response from a trackback endpoint.
    *
-   * @param String $html
-   *  The response provided by the Trackback endpoint.
+   * And report if the response is an error (and any message, if provided).
    *
-   * @return Mixed
-   * - NULL   if the HTML cannot be parsed (is not valid XML)
-   * - FALSE  if no errors could be found
-   * - TRUE   if errors were found but no error message provided
-   * - String the error message provided
+   * @param string $html
+   *   The response provided by the Trackback endpoint.
+   *
+   * @return mixed
+   *   - NULL
+   *     if the HTML cannot be parsed (is not valid XML)
+   *   - FALSE
+   *     if no errors could be found
+   *   - TRUE
+   *     if errors were found but no error message provided
+   *   - String
+   *     the error message provided
    */
   public static function parseRemoteServerResponseForErrors($html) {
     // If the html can't be parsed as XML, return error response NULL.
@@ -472,7 +464,7 @@ class VinculumTrackbackHandler {
       return TRUE;
     }
     elseif ($error_response[0] == 0) {
-      // Error response 0 means OK
+      // Error response 0 means OK.
       return FALSE;
     }
     else {
@@ -482,13 +474,13 @@ class VinculumTrackbackHandler {
     }
   }
 
-
   /**
-   * Delegated handler for debug messages, allowing control over which are
-   * passed to watchdog().
+   * Delegated handler for debug messages.
+   *
+   * Allowing control over which are passed to watchdog().
    */
-  function debug($message, $params = array(), $error_level = WATCHDOG_NOTICE) {
-    if ($error_level <= self::$watchdog_reporting_level) {
+  public function debug($message, $params = array(), $error_level = WATCHDOG_NOTICE) {
+    if ($error_level <= self::$watchdogReportingLevel) {
       watchdog('Trackback', $message, $params, $error_level);
     }
   }
