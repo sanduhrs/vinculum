@@ -218,3 +218,23 @@ function vinculum_uninstall() {
     variable_del($variable);
   }
 }
+
+/**
+ * Implements hook_enable().
+ */
+function vinculum_enable() {
+  $override_function = variable_get('drupal_http_request_function', FALSE);
+  if (!$override_function) {
+    variable_set('drupal_http_request_function', 'vinculum_drupal_http_request');
+  }
+}
+
+/**
+ * Implements hook_disable().
+ */
+function vinculum_disable() {
+  $override_function = variable_get('drupal_http_request_function', FALSE);
+  if ($override_function === 'vinculum_drupal_http_request') {
+    variable_del('drupal_http_request_function');
+  }
+}
