@@ -1,11 +1,15 @@
 <?php
 /**
  * @file
+ * Pingback handler
+ *
+ * @see http://www.hixie.ch/specs/pingback/pingback-1.0
+ * @see http://www.w3.org/wiki/Pingback
+ *
  * Class handler provides the tools to:
- * - Send a pingback.
- * - Discover if a URL provides pingback, and look up the XML-RPC endpoint.
+ * - Send a Pingback.
+ * - Discover if a URL provides Pingback, and look up the XML-RPC endpoint.
  */
-
 
 class VinculumPingbackHandler {
 
@@ -16,7 +20,6 @@ class VinculumPingbackHandler {
   // Messages below this error-level will not be reported.
   public static $watchdog_reporting_level = WATCHDOG_DEBUG;
 
-
   /**
    * Attempt to send a pingback.  The pingback protocol uses a simple static
    * schema: only the origin and target URLs are used.
@@ -25,8 +28,10 @@ class VinculumPingbackHandler {
    * Absolute URL of the remote article.
    * @param String $source
    * Absolute URL of the local page.
+   *
+   * @return bool
    */
-  public function send($source, $target) {
+  public static function send($source, $target) {
     // Check whether the remote target supports pingbacks.
     if ($xmlrpc_endpoint = self::getXmlRpcEndpoint($target)) {
       $params = array(
@@ -75,7 +80,7 @@ class VinculumPingbackHandler {
    * Absolute URL of the XML-RPC endpoint, or FALSE if pingback is not
    * supported.
    */
-  function getXmlRpcEndpoint($url) {
+  public static function getXmlRpcEndpoint($url) {
     self::debug('Attempting pingback auto-discovery on %url.', array('%url' => $url), WATCHDOG_DEBUG);
 
     // 1.  Check for an X-Pingback header.
@@ -90,7 +95,6 @@ class VinculumPingbackHandler {
       self::debug('Pingback auto-discovery is supported on %url, with the Pingback endpoint %endpoint.<br />(using X-PINGBACK HTTP header).', array('%url' => $url, '%endpoint' => $endpoint), WATCHDOG_DEBUG);
       return $endpoint;
     }
-
 
     // 2.  No X-PINGBACK header, so do a full request for the page, check for a
     // <link> tag in the <head> section.
@@ -111,18 +115,16 @@ class VinculumPingbackHandler {
       }
     }
 
-
     // No X-Pingback header, no <link rel="pingback">.
     self::debug('Pingback auto-discovery is not supported on %url.', array('%url' => $url), WATCHDOG_DEBUG);
     return FALSE;
   }
 
-
   /**
    * Delegated handler for debug messages, allowing control over which are
    * passed to watchdog().
    */
-  function debug($message, $params = array(), $error_level = WATCHDOG_NOTICE) {
+  public static function debug($message, $params = array(), $error_level = WATCHDOG_NOTICE) {
     if ($error_level <= self::$watchdog_reporting_level) {
       watchdog('Pingback', $message, $params, $error_level);
     }
