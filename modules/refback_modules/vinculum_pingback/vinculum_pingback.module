@@ -1,7 +1,10 @@
 <?php
 /**
  * @file
- * Specification document: http://www.hixie.ch/specs/pingback/pingback-1.0
+ * Provide the Pingback protocol to the Vinculum module.
+ *
+ * @see Specification document: http://www.hixie.ch/specs/pingback/pingback-1.0
+ * @see also http://www.w3.org/wiki/Pingback
  */
 
 /**
