@@ -2,8 +2,11 @@
 /**
  * @file
  * Provide the Trackback protocol to the Vinculum module.
+ *
  * Note that many sites which use trackback do not implement the autodiscovery
  * mechanisms, which means it's important to provide a manual interface.
+ *
+ * @see Specification document: http://archive.cweiske.de/trackback/trackback-1.2.html
  */
 
 
