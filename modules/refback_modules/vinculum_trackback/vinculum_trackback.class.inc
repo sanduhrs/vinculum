@@ -1,11 +1,14 @@
 <?php
 /**
  * @file
+ * Trackback handler
+ *
+ * @see http://archive.cweiske.de/trackback/trackback-1.2.html
+ *
  * Class handler provides the tools to:
  * - Send a trackback.
  * - Discover if a URL provides trackback, and look up the endpoint URL.
  */
-
 
 class VinculumTrackbackHandler {
 
@@ -17,7 +20,7 @@ class VinculumTrackbackHandler {
   public static $watchdogReportingLevel = WATCHDOG_DEBUG;
 
   /**
-   * Send a trackback request.
+   * Send a Trackback request.
    *
    * @param string $remote_url
    *   The absolute URL of the remote article.
@@ -36,19 +39,18 @@ class VinculumTrackbackHandler {
    *   FALSE if the remote site reported failure, or any other error occurred
    *   (e.g., network error preventing the site from being reached).
    */
-  public function send($remote_url, $local_url, $params) {
+  public static function send($remote_url, $local_url, $params) {
     // $title, $excerpt = NULL, $blog_name = NULL.
     if ($endpoint = self::getEndpoint($remote_url)) {
       $params['url'] = $local_url;
-      return $self::sendTrackback($endpoint, $params);
+      return self::sendTrackback($endpoint, $params);
     }
   }
-
 
   /**
    * Send a trackback request (notify a third-party site of a link).
    *
-   * @param string $endpoint
+   * @param string $endpoint_url
    *   The URL of the remote Trackback endpoint.
    * @param array $params
    *   - url
@@ -60,12 +62,13 @@ class VinculumTrackbackHandler {
    *   - blog_name
    *     Name of the local site (optional; defaults to site-name).
    *
+   * @throws Exception
    * @return bool
    *   TRUE  if the remote site reported success.
    *   FALSE if the remote site reported failure, or any other error occurred
    *   (e.g., network error preventing the site from being reached).
    */
-  public function sendTrackback($endpoint, $params) {
+  public static function sendTrackback($endpoint_url, $params) {
     if (!is_array($params) || empty ($params['url'])) {
       throw new Exception("sendTrackback() requires that \$params['url'] is provided");
     }
@@ -90,7 +93,7 @@ class VinculumTrackbackHandler {
 
     // Parse the remote server's response for any error messages.
     if ($result->data) {
-      $remote_errors = self::parseRemoteServerResponse($result->data);
+      $remote_errors = self::parseRemoteServerResponseForErrors($result->data);
 
       // Log the error.
       if (is_null($remote_errors)) {
@@ -132,7 +135,7 @@ class VinculumTrackbackHandler {
   public static function getEndpoint($url) {
     // Efficiency-check: HEAD the URL to lookup the mime-type; skip the full
     // auto-discovery if the content doesn't appear to be text.
-    if (!$result == self::urlMimeTypeIsTextBased($url)) {
+    if (!$result = self::urlMimeTypeIsTextBased($url)) {
       // Possible return values from the helper:
       // - TRUE:  content *might* support Trackbacks.
       // - FALSE: content is unlikely to support Trackbacks.
@@ -202,6 +205,8 @@ class VinculumTrackbackHandler {
    *   call. For nodes, this is node/$nid/trackback.
    * @param string $title
    *   The title of the page/node.
+   *
+   * @return string
    */
   public static function buildTrackbackRDF($local_url, $endpoint_url, $title) {
     $rdf_text = "\n<!--\n";
@@ -242,6 +247,8 @@ class VinculumTrackbackHandler {
    * @param string $failure_message
    *   Human-readable message to provide to the remote server to describe the
    *   error. For example "Trackback already registered".
+   *
+   * @return string
    */
   public function getResponseFailure($failure_message = NULL) {
     if (is_null($failure_message)) {
@@ -301,7 +308,6 @@ class VinculumTrackbackHandler {
              || substr_count($mime_type, 'application/xhtml+xml')
              || substr_count($mime_type, 'application/xml')
              || substr_count($mime_type, 'text/xml');
-
     return $is_valid;
   }
 
@@ -317,7 +323,7 @@ class VinculumTrackbackHandler {
    *   If no Trackback endpoints are discovered, an empty array will be
    *   returned. If the html cannot be parsed, NULL is returned.
    */
-  public function discoverEndpointInHTML($html) {
+  public static function discoverEndpointInHTML($html) {
     $matches = array();
 
     // We need to match: RDF/Description[@ping and @identifier]
@@ -346,11 +352,23 @@ class VinculumTrackbackHandler {
     $xml->registerXPathNamespace($p1, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
     $xml->registerXPathNamespace($p2, 'http://purl.org/dc/elements/1.1/');
     $xml->registerXPathNamespace($p3, 'http://madskills.com/public/xml/rss/module/trackback/');
-
     if ($rdf_tags = $xml->xpath("//{$p1}:RDF/{$p1}:Description[@{$p2}:identifier and @{$p3}:ping]")) {
       foreach ($rdf_tags as $element) {
         $identifier = (string) $element->attributes('http://purl.org/dc/elements/1.1/')->identifier;
         $ping = (string) $element->attributes('http://madskills.com/public/xml/rss/module/trackback/')->ping;
+        $matches[$identifier] = $ping;
+      }
+    }
+
+    // The last resort.
+    if (empty($matches)) {
+      preg_match_all('/dc:identifier="(.*)"/', self::cleanupHTML($html), $identifier_matches, PREG_PATTERN_ORDER);
+      if (!empty($identifier_matches)) {
+        $identifier = array_pop($identifier_matches)[0];
+      }
+      preg_match_all('/trackback:ping="(.*)"/', self::cleanupHTML($html), $ping_matches, PREG_PATTERN_ORDER);
+      if (!empty($ping_matches)) {
+        $ping = array_pop($ping_matches)[0];
         $matches[$identifier] = $ping;
       }
     }
@@ -375,7 +393,6 @@ class VinculumTrackbackHandler {
         'return preg_match("#<([^:]*:)?RDF\s#ms", $matches[1]) ? $matches[1] : "<!--" . $matches[1] . "-->";'
       ),
       $html);
-
     return $html;
   }
 
@@ -479,7 +496,7 @@ class VinculumTrackbackHandler {
    *
    * Allowing control over which are passed to watchdog().
    */
-  public function debug($message, $params = array(), $error_level = WATCHDOG_NOTICE) {
+  public static function debug($message, $params = array(), $error_level = WATCHDOG_NOTICE) {
     if ($error_level <= self::$watchdogReportingLevel) {
       watchdog('Trackback', $message, $params, $error_level);
     }
