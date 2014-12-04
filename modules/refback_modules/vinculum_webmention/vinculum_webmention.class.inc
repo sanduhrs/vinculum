@@ -1,0 +1,127 @@
+<?php
+/**
+ * @file
+ * Webmention handler
+ *
+ * @see http://webmention.org
+ */
+
+class VinculumWebmentionHandler {
+
+  // User-agent to use when querying remote sites.
+  const UA = 'Drupal Webmention (+http://drupal.org/project/vinculum)';
+
+  // Minimum error-level to trigger a watchdog message.
+  // Messages below this error-level will not be reported.
+  public static $watchdog_reporting_level = WATCHDOG_DEBUG;
+
+  /**
+   * Attempt to send a Webmention.
+   *
+   * @param string $target
+   *   Absolute URL of the remote article.
+   * @param string $source
+   *   Absolute URL of the local page.
+   *
+   * @return bool
+   */
+  public static function send($source, $target) {
+    if ($endpoint_url = self::discover($target)) {
+      $response = drupal_http_request($endpoint_url, array(
+        'method' => 'POST',
+        'headers' => array(
+          'User-Agent' => self::UA,
+          'Content-Type' => 'application/x-www-form-urlencoded; charset=utf-8',
+        ),
+        'data' => drupal_http_build_query(array(
+          'source' => $source,
+          'target' => $target,
+        )),
+      ));
+      if ($response->code === '200') {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Discover Webmention endpoint.
+   *
+   * @param string $target
+   *   Absolute URL of the remote article.
+   *
+   * @return mixed
+   *   Return endpoint URL as string or boolean FALSE.
+   */
+  public static function discover($target) {
+    $response = drupal_http_request($target);
+
+    if ($response->code != '200') {
+      return FALSE;
+    }
+
+    // Check for Webmention endpoint advertised in response headers.
+    if (array_key_exists('link', $response->headers)) {
+      // Convert to array no matter what we have.
+      $link_headers = $response->headers['link'];
+      if (!is_array($link_headers)) {
+        $link_headers = explode(', ', $link_headers);
+      }
+
+      foreach ($link_headers as $link_header) {
+        if (preg_match('~<((?:https?://)?[^>]+)>; rel="webmention"~', $link_header, $match)) {
+          $endpoint = self::absoluteURL($target, $match[1]);
+          return $endpoint;
+        }
+        elseif (preg_match('~<((?:https?://)?[^>]+)>; rel="http://webmention.org/?"~', $link_header, $match)) {
+          $endpoint = self::absoluteURL($target, $match[1]);
+          return $endpoint;
+        }
+      }
+    }
+
+    // Check for <link>- or <a>-element with rel="webmention".
+    if (preg_match('/<(?:link|a)[ ]+href="([^"]+)"[ ]+rel="webmention"[ ]*\/?>/i', $body, $match) ||
+      preg_match('/<(?:link|a)[ ]+rel="webmention"[ ]+href="([^"]+)"[ ]*\/?>/i', $body, $match)) {
+      return self::absoluteURL($target, $match[1]);
+    }
+    elseif (preg_match('/<(?:link|a)[ ]+href="([^"]+)"[ ]+rel="http:\/\/webmention\.org\/?"[ ]*\/?>/i', $body, $match) ||
+      preg_match('/<(?:link|a)[ ]+rel="http:\/\/webmention\.org\/?"[ ]+href="([^"]+)"[ ]*\/?>/i', $body, $match)) {
+      return self::absoluteURL($target, $match[1]);
+    }
+
+    // No match if we arrive here.
+    return FALSE;
+  }
+
+  /**
+   * Absolutize a URL.
+   *
+   * @return mixed
+   *   A absolute URL as string or boolean FALSE.
+   */
+  public static function absoluteURL($target, $url) {
+    if (substr($url, 0, 4) !== 'http') {
+      $parts = parse_url($target);
+      $url = $parts['scheme'] . '://' . $parts['host'] . '/' . ltrim($url, '/');
+    }
+
+    if (filter_var($url, FILTER_VALIDATE_URL)) {
+      return $url;
+    }
+
+    return FALSE;
+  }
+
+  /**
+   * Delegated handler for debug messages, allowing control over which are
+   * passed to watchdog().
+   */
+  public static function debug($message, $params = array(), $error_level = WATCHDOG_NOTICE) {
+    if ($error_level <= self::$watchdog_reporting_level) {
+      watchdog('Pingback', $message, $params, $error_level);
+    }
+  }
+
+}

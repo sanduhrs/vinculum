@@ -1,0 +1,67 @@
+<?php
+/**
+ * @file
+ * Provide the Webmention protocol to the Vinculum module.
+ *
+ * @see Specification document: http://archive.cweiske.de/trackback/trackback-1.2.html
+ */
+
+/**
+ * Implements hook_vinculum_handler().
+ */
+function vinculum_webmention_vinculum_handler() {
+  return array(
+    'protocol' => t('Webmention'),
+  );
+}
+
+/**
+ * Implements hook_vinculum_send().
+ */
+function vinculum_webmention_vinculum_send($target, $source, $node) {
+  return VinculumWebmentionHandler::send($source, $target);
+}
+
+/**
+ * Implements hook_menu().
+ */
+function vinculum_webmention_menu() {
+  // Endpoint for webmention registration for nodes. Not for humans!
+  $items['node/%node/webmention'] = array(
+    'title' => 'Webmentions',
+    'page callback' => 'vinculum_webmention_receive',
+    'page arguments' => array(1),
+
+    // This URL is accessible according to the node's visibility to ANONYMOUS
+    // users and whether 'Receive vinculums' is allowed on the node.
+    'access callback' => 'vinculum_node_allows_vinculum',
+    'access arguments' => array(1, 'receive'),
+
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_node_view().
+ *
+ * Adds a HTTP header and a <link> tag which give the pingback server endpoint
+ * URL.
+ */
+function vinculum_webmention_node_view($node, $view_mode, $langcode) {
+  // @TODO: configurable view-modes?
+  if ($view_mode == 'full' && vinculum_node_allows_vinculum($node, 'receive')) {
+    $webmention_endpoint = url('node/' . $node->nid . '/webmention', array('absolute' => TRUE));
+
+    // Add both a HTTP header and a <link> tag.
+    drupal_add_http_header('Link', '<' . $webmention_endpoint . '>; rel="webmention"');
+    drupal_add_html_head_link(array('rel' => 'webmention', 'href' => $webmention_endpoint));
+  }
+}
+
+/**
+ * Webmention endpoint; Menu callback.
+ */
+function vinculum_webmention_receive() {
+}

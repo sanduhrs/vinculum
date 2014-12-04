@@ -1,0 +1,7 @@
+name = Vinculum handler - Webmention
+description = Provides the Webmention protocol for the Vinculum module.
+core = 7.x
+package = Vinculum
+dependencies[] = vinculum
+files[] = vinculum_webmention.class.inc
+files[] = vinculum_webmention.test
