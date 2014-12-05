@@ -77,7 +77,6 @@ class VinculumTrackbackHandler {
     $params += array(
       'blog_name' => variable_get('site_name', 'Drupal'),
     );
-    $params = http_build_query($params);
 
     $options = array(
       // The Trackback protocol supports requires POST.
@@ -87,7 +86,7 @@ class VinculumTrackbackHandler {
         'Content-Type' => 'application/x-www-form-urlencoded; charset=utf-8',
       ),
       // Add the data to send in the Trackback.
-      'data' => $params,
+      'data' => drupal_http_build_query($params),
     );
     $result = drupal_http_request($endpoint_url, $options);
 
@@ -225,7 +224,7 @@ class VinculumTrackbackHandler {
   /**
    * The response expected if a trackback succeeded.
    */
-  public function getResponseSuccess() {
+  public static function getResponseSuccess() {
     // The Trackback standard's response format for successful requests.
     $response = array();
 
@@ -240,6 +239,24 @@ class VinculumTrackbackHandler {
     return implode("\n", $response);
   }
 
+  /**
+   * The response expected if a trackback failed.
+   */
+  public static function getResponseFailed($message = '') {
+    // The Trackback standard's response format for failed requests.
+    $response = array();
+
+    $response[] = '<?xml version="1.0" encoding="utf-8"?>';
+    $response[] = '<response>';
+    $response[] = '<error>1</error>';
+    $response[] = '<message>' . check_plain($message) . '</message>';
+    $response[] = '</response>';
+
+    // Add a trailing new-line.
+    $response[] = '';
+
+    return implode("\n", $response);
+  }
 
   /**
    * The response expected if a trackback failed.
@@ -250,7 +267,7 @@ class VinculumTrackbackHandler {
    *
    * @return string
    */
-  public function getResponseFailure($failure_message = NULL) {
+  public static function getResponseFailure($failure_message = NULL) {
     if (is_null($failure_message)) {
       // Default message is *untranslated*.
       $failure_message = 'An unknown error occurred';
