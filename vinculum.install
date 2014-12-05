@@ -110,7 +110,7 @@ function vinculum_schema() {
         'length' => 255,
         'default' => NULL,
       ),
-      'timestamp' => array(
+      'created' => array(
         'description' => 'The Unix timestamp when the vinculum was most recently attempted.',
         'type' => 'int',
         'not null' => TRUE,
@@ -181,7 +181,7 @@ function vinculum_schema() {
         'length' => 128,
         'default' => '',
       ),
-      'timestamp' => array(
+      'created' => array(
         'description' => 'The Unix timestamp when the vinculum was received.',
         'type' => 'int',
         'not null' => TRUE,
@@ -237,4 +237,15 @@ function vinculum_disable() {
   if ($override_function === 'vinculum_drupal_http_request') {
     variable_del('drupal_http_request_function');
   }
+}
+
+/**
+ * Timestamp field names conflict with PostgreSQL keywords
+ */
+function vinculum_update_7200(&$sandbox) {
+  $schema = vinculum_schema();
+
+   // Update field names to not conflict with PostgreSQL.
+  db_change_field('node_vinculum_sent', 'timestamp', 'created', $schema['node_vinculum_sent']['fields']['created']);
+  db_change_field('node_vinculum_received', 'timestamp', 'created', $schema['node_vinculum_received']['fields']['created']);
 }

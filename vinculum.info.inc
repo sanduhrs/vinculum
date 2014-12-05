@@ -54,11 +54,11 @@ function vinculum_entity_property_info() {
     'description' => t("The IP address of the computer the ref-back was posted from."),
     'schema field' => 'origin_ip',
   );
-  $properties['timestamp'] = array(
+  $properties['created'] = array(
     'label' => t("Date received"),
     'type' => 'date',
     'description' => t("The date the ref-back was received."),
-    'schema field' => 'timestamp',
+    'schema field' => 'created',
   );
   $properties['handler'] = array(
     'label' => t("Ref-back module"),

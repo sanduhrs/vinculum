@@ -210,7 +210,7 @@ function vinculum_trackback_save_trackback($trackback) {
       'title'     => $trackback->title,
       'excerpt'   => $trackback->excerpt,
       'origin_ip' => ip_address(),
-      'timestamp' => time(),
+      'created' => time(),
     ))
     ->execute();
 

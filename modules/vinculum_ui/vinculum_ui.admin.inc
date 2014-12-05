@@ -102,7 +102,7 @@ function theme_vinculum_ui__settings_form__handlers_element($variables) {
  */
 function vinculum_ui__report_sent() {
   $header = array(
-    array('data' => t('Date'),       'field' => 'timestamp',  'sort' => 'desc'),
+    array('data' => t('Date'),       'field' => 'created',  'sort' => 'desc'),
     array('data' => t('From'),       'field' => 'n.title'),
     array('data' => t('Remote URL'), 'field' => 'url'),
     array('data' => t('Handler'),    'field' => 'handler'),
@@ -123,7 +123,7 @@ function vinculum_ui__report_sent() {
   $rows = array();
   foreach ($results as $result) {
     $rows[] = array(
-      date('d/m/Y H:i', $result->timestamp),
+      date('d/m/Y H:i', $result->created),
       l($result->title, "node/{$result->nid}"),
       l($result->url, $result->url),
       isset($handlers[$result->handler]) ? $handlers[$result->handler]->protocol : $result->handler,
@@ -142,7 +142,7 @@ function vinculum_ui__report_sent() {
 function vinculum_ui__report_received() {
   $header = array(
     array(
-      'data' => t('Date'), 'field' => 'timestamp', 'sort' => 'desc'),
+      'data' => t('Date'), 'field' => 'created', 'sort' => 'desc'),
     array('data' => t('Content'),    'field' => 'n.title'),
     array('data' => t('Remote URL'), 'field' => 'url'),
     array('data' => t('Handler'),    'field' => 'handler'),
@@ -164,7 +164,7 @@ function vinculum_ui__report_received() {
   $rows = array();
   foreach ($results as $result) {
     $rows[] = array(
-      date('d/m/Y H:i', $result->timestamp),
+      date('d/m/Y H:i', $result->created),
       l($result->title, "node/{$result->nid}"),
       l($result->url, $result->url),
       isset($handlers[$result->handler]) ? $handlers[$result->handler]->protocol : $result->handler,

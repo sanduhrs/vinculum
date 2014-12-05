@@ -15,7 +15,7 @@ $examples[] = array(
   'excerpt'   => NULL,
   'handler'   => 'pingback',
   'origin_ip' => '192.168.10.1',
-  'timestamp' => time() - rand(0, 86400),
+  'created' => time() - rand(0, 86400),
 );
 $examples[] = array(
   'nid'       => 26,
@@ -24,7 +24,7 @@ $examples[] = array(
   'excerpt'   => NULL,
   'handler'   => 'pingback',
   'origin_ip' => '192.168.10.2',
-  'timestamp' => time() - rand(0, 86400),
+  'created' => time() - rand(0, 86400),
 );
 $examples[] = array(
   'nid'       => 21,
@@ -33,7 +33,7 @@ $examples[] = array(
   'excerpt'   => NULL,
   'handler'   => 'pingback',
   'origin_ip' => '192.168.10.3',
-  'timestamp' => time() - rand(0, 86400),
+  'created' => time() - rand(0, 86400),
 );
 $examples[] = array(
   'nid'       => 16,
@@ -42,7 +42,7 @@ $examples[] = array(
   'excerpt'   => NULL,
   'handler'   => 'pingback',
   'origin_ip' => '192.168.10.4',
-  'timestamp' => time() - rand(0, 86400),
+  'created' => time() - rand(0, 86400),
 );
 
 
@@ -57,7 +57,7 @@ foreach ($examples as $example) {
       'excerpt'   => $example['excerpt'],
       'handler'   => $example['handler'],
       'origin_ip' => $example['origin_ip'],
-      'timestamp' => $example['timestamp'],
+      'created' => $example['created'],
     ))
     ->execute();
 }

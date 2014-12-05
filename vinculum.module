@@ -268,7 +268,7 @@ function vinculum_receive(vinculum $vinculum) {
     ->fields(array(
       'handler'   => $vinculum->handler,
       'origin_ip' => $vinculum->origin_ip,
-      'timestamp' => $vinculum->timestamp,
+      'created' => $vinculum->created,
     ))
     ->execute();
 
@@ -445,7 +445,7 @@ function vinculum_send_single_vinculum($source, $target, $node) {
       'url' => $target,
       ))
     ->fields(array(
-      'timestamp' => time(),
+      'created' => time(),
     ))
     ->execute();
 

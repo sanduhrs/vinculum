@@ -25,7 +25,7 @@ class VinculumReceived extends Entity {
   public $title;
   public $excerpt;
   public $ip_address;
-  public $timestamp;
+  public $created;
   public $handler;
 
 
@@ -40,7 +40,7 @@ class VinculumReceived extends Entity {
    * - title           Defaults to NULL
    * - excerpt         Defaults to NULL
    * - ip_address      Defaults to ip_address()
-   * - timestamp       Defaults to time()
+   * - created       Defaults to time()
    */
   public function __construct(array $values = array(), $entityType = NULL) {
     // If localUrl is provided, attempt to convert to a node NID.
@@ -56,7 +56,7 @@ class VinculumReceived extends Entity {
       'title'      => NULL,
       'excerpt'    => NULL,
       'ip_address' => ip_address(),
-      'timestamp'  => REQUEST_TIME,
+      'created'  => REQUEST_TIME,
     );
     foreach ($defaults as $key => $default) {
       $this->$key = (isset($values[$key])) ? $values[$key] : $defaults[$key];
