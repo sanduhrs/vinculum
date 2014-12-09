@@ -27,17 +27,20 @@ class VinculumWebmentionHandler {
    */
   public static function send($source, $target) {
     if ($endpoint_url = self::discover($target)) {
+      $params = array(
+        'source' => $source,
+        'target' => $target,
+      );
+
       $response = drupal_http_request($endpoint_url, array(
         'method' => 'POST',
         'headers' => array(
           'User-Agent' => self::UA,
           'Content-Type' => 'application/x-www-form-urlencoded; charset=utf-8',
         ),
-        'data' => drupal_http_build_query(array(
-          'source' => $source,
-          'target' => $target,
-        )),
+        'data' => drupal_http_build_query($params),
       ));
+
       if ($response->code === '200') {
         return TRUE;
       }
@@ -71,24 +74,24 @@ class VinculumWebmentionHandler {
 
       foreach ($link_headers as $link_header) {
         if (preg_match('~<((?:https?://)?[^>]+)>; rel="webmention"~', $link_header, $match)) {
-          $endpoint = self::absoluteURL($target, $match[1]);
+          $endpoint = self::absoluteURL($target, array_pop($match));
           return $endpoint;
         }
         elseif (preg_match('~<((?:https?://)?[^>]+)>; rel="http://webmention.org/?"~', $link_header, $match)) {
-          $endpoint = self::absoluteURL($target, $match[1]);
+          $endpoint = self::absoluteURL($target, array_pop($match));
           return $endpoint;
         }
       }
     }
 
     // Check for <link>- or <a>-element with rel="webmention".
-    if (preg_match('/<(?:link|a)[ ]+href="([^"]+)"[ ]+rel="webmention"[ ]*\/?>/i', $body, $match) ||
-      preg_match('/<(?:link|a)[ ]+rel="webmention"[ ]+href="([^"]+)"[ ]*\/?>/i', $body, $match)) {
-      return self::absoluteURL($target, $match[1]);
+    if (preg_match('/<(?:link|a)[ ]+href="([^"]+)"[ ]+rel="webmention"[ ]*\/?>/i', $response->data, $match) ||
+      preg_match('/<(?:link|a)[ ]+rel="webmention"[ ]+href="([^"]+)"[ ]*\/?>/i', $response->data, $match)) {
+      return self::absoluteURL($target, array_pop($match));
     }
     elseif (preg_match('/<(?:link|a)[ ]+href="([^"]+)"[ ]+rel="http:\/\/webmention\.org\/?"[ ]*\/?>/i', $body, $match) ||
       preg_match('/<(?:link|a)[ ]+rel="http:\/\/webmention\.org\/?"[ ]+href="([^"]+)"[ ]*\/?>/i', $body, $match)) {
-      return self::absoluteURL($target, $match[1]);
+      return self::absoluteURL($target, array_pop($match));
     }
 
     // No match if we arrive here.
@@ -112,6 +115,28 @@ class VinculumWebmentionHandler {
     }
 
     return FALSE;
+  }
+
+  /**
+   * Validate if a source exists.
+   *
+   * @param $target
+   *
+   * @return bool
+   */
+  public static function validateSourceExists($target) {
+    return TRUE;
+  }
+
+  /**
+   * Validate if a source contains target.
+   *
+   * @param $target
+   *
+   * @return bool
+   */
+  public static function validateSourceContainsTarget($source, $target) {
+    return TRUE;
   }
 
   /**
