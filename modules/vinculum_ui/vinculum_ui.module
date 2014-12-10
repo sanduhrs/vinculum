@@ -55,9 +55,10 @@ function vinculum_ui_permission() {
   // that should be managed by permissions.
   foreach (node_permissions_get_configured_types() as $type => $info) {
     // Build standard list of node permissions for this type.
+    $node_type = node_type_get_type($info);
     $perms += array(
       "configure $type vinculums" => array(
-        'title' => t('%type_name: Configure ref-backs', array('%type_name' => $info->name)),
+        'title' => t('%type_name: Configure ref-backs', array('%type_name' => $node_type->name)),
         'description' => t('This is only available to users who already have permission to edit the content.'),
       ),
     );
