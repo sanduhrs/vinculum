@@ -224,6 +224,14 @@ function vinculum_vinculum_received_presave(VinculumReceived $vinculum) {
   }
 }
 
+function vinculum_rules_vinculum_received_insert(VinculumReceived $vinculum) {
+  // Fire hook_vinculum_received_action().
+  // Actions are implemented through:
+  // - vinculum_rules - integrates with the rules module.
+  module_invoke_all('vinculum_received_action', $vinculum);
+}
+
+
 /**
  * Public API functions.
  */
@@ -487,6 +495,12 @@ function vinculum_send_single_vinculum($source, $target, $node) {
         ))
         ->execute();
       // Stop at the first successful handler.
+      // Fire hook_vinculum_sent_action().
+      // Actions are implemented through:
+      // - vinculum_rules - integrates with the rules module.
+      // Treat vinculum as vinculum object.
+      $vinculum=new vinculum((int)$node->nid, $target, $handler->module);
+      module_invoke_all('vinculum_sent_action', $vinculum);
       return TRUE;
     }
   }
