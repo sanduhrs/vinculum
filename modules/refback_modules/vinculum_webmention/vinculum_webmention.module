@@ -66,6 +66,17 @@ function vinculum_webmention_node_view($node, $view_mode, $langcode) {
 function vinculum_webmention_receive() {
   $success = TRUE;
 
+  //Will check later #TODO will fight DDOS better https://github.com/converspace/webmention/blob/master/README.md#sender-notifies-receiver
+  if (variable_get('vinculum_webmention_receive_async',false)){
+    drupal_add_http_header('Status', '202 Accepted');
+    echo $_POST['target'].'/webmention_in_queue'; 
+    // Perform end-of-request tasks.
+    drupal_page_footer();   
+    return;
+  }
+
+
+
   // Verify Webmention
   $source = $_POST['source'];
   $target = $_POST['target'];
@@ -76,13 +87,13 @@ function vinculum_webmention_receive() {
   $node = node_load($nid);
   if (!$node->nid) {
     $success = FALSE;
-    drupal_add_http_header('Status', '404 Bad Request');
+    drupal_add_http_header('Status', '400 Bad Request');
     echo t('No valid resource.');
   }
 
   if (!vinculum_webmention_validate_resource_accepts_webmentions($node)) {
     $success = FALSE;
-    drupal_add_http_header('Status', '404 Bad Request');
+    drupal_add_http_header('Status', '400 Bad Request');
     echo t('Resource does not accept Webmentions.');
   }
 
@@ -92,24 +103,40 @@ function vinculum_webmention_receive() {
   // response).
   if (!vinculum_webmention_validate_source_exists($source)) {
     $success = FALSE;
-    drupal_add_http_header('Status', '404 Bad Request');
+    drupal_add_http_header('Status', '400 Bad Request');
     echo t('Source does not exist or is not accessible.');
   }
 
   if (!vinculum_webmention_validate_source_contains_target($source, $target)) {
     $success = FALSE;
-    drupal_add_http_header('Status', '404 Bad Request');
+    drupal_add_http_header('Status', '400 Bad Request');
     echo t('Source does not contain target.');
   }
 
   //@TODO Add / update / delete Webmention
-
-  if (FALSE) {
+  // Attempt to create a Vinculum entity.
+  $vinculum = new VinculumReceived(array(
+        'handler'  => 'vinculum_webmention',
+        'localUrl' => $target,
+        'url'      => $source,
+        'nid'      => $node->nid,
+  ));
+  if ($result = $vinculum->save()) {
+    // Successful: provide a meaningful response.
+    if ($result == SAVED_NEW) {
+      $message = t('WebMention from @source to @target registered.', array('@source' => $source, '@target' => $target));
+    }
+    elseif ($result == SAVED_UPDATED) {
+      $message = t('WebMention from @source to @target updated.', array('@source' => $source, '@target' => $target));
+    }
+    return $message;
+  }
+  else {
     $success = FALSE;
 
     // Something went wrong.
     drupal_add_http_header('Status', '500 Internal Server Error');
-    print 'Something went wrong. Really!';
+    print 'Something went wrong. Really!';   
   }
 
   // Everything went fine.
@@ -117,6 +144,7 @@ function vinculum_webmention_receive() {
     drupal_add_http_header('Status', '200 OK');
     print 'OK';
   }
+  vinculum_dbg($success,true,'webmentionthread');
 
   // Perform end-of-request tasks.
   drupal_page_footer();
@@ -132,6 +160,7 @@ function vinculum_webmention_receive() {
  *   Return a node id or FALSE
  */
 function vinculum_webmention_validate_resource_exists($target) {
+  return vinculum_lookup_nid($target);
   $parts = parse_url($target);
 
   // Non clean URL.
