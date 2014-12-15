@@ -5,7 +5,6 @@
  *
  * @see http://webmention.org
  */
-
 class VinculumWebmentionHandler {
 
   // User-agent to use when querying remote sites.
@@ -89,8 +88,8 @@ class VinculumWebmentionHandler {
       preg_match('/<(?:link|a)[ ]+rel="webmention"[ ]+href="([^"]+)"[ ]*\/?>/i', $response->data, $match)) {
       return self::absoluteURL($target, array_pop($match));
     }
-    elseif (preg_match('/<(?:link|a)[ ]+href="([^"]+)"[ ]+rel="http:\/\/webmention\.org\/?"[ ]*\/?>/i', $body, $match) ||
-      preg_match('/<(?:link|a)[ ]+rel="http:\/\/webmention\.org\/?"[ ]+href="([^"]+)"[ ]*\/?>/i', $body, $match)) {
+    elseif (preg_match('/<(?:link|a)[ ]+href="([^"]+)"[ ]+rel="http:\/\/webmention\.org\/?"[ ]*\/?>/i', $response->data, $match) ||
+      preg_match('/<(?:link|a)[ ]+rel="http:\/\/webmention\.org\/?"[ ]+href="([^"]+)"[ ]*\/?>/i', $response->data, $match)) {
       return self::absoluteURL($target, array_pop($match));
     }
 
@@ -145,7 +144,7 @@ class VinculumWebmentionHandler {
    */
   public static function debug($message, $params = array(), $error_level = WATCHDOG_NOTICE) {
     if ($error_level <= self::$watchdog_reporting_level) {
-      watchdog('Pingback', $message, $params, $error_level);
+      watchdog('WebMention', $message, $params, $error_level);
     }
   }
 

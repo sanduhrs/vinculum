@@ -21,7 +21,6 @@ class VinculumReceived extends Entity {
    */
   public $nid;
   public $url;
-
   public $title;
   public $excerpt;
   public $ip_address;
@@ -76,21 +75,86 @@ class VinculumReceived extends Entity {
    * @return Int|FALSE
    * The node NID, or FALSE if a corresponding node cannot be found.
    */
-  public static function lookupNid($url) {
-    // Strip the domain from the URL (if present).
-    if (preg_match('#^(https?://[^/]+/).*#', $url, $matches)) {
-      $url = drupal_substr($url, drupal_strlen($matches[1]));
-    }
-
-    // Lookup URL aliases.
-    if ($local_path = drupal_lookup_path('source', $url)) {
-      $url = $local_path;
-    }
-
-    if (preg_match('#^node/(\d+)$#', $url, $matches)) {
-      return (int) $matches[1];
+  protected static function lookupNid($url) {
+    $path = str_replace($GLOBALS['base_url'] . "/" , "", $url);
+    if ($path != $url) {
+      $node_path = explode('/', drupal_get_normal_path($path));
+      if ($node_path[0] == 'node' && is_numeric($node_path[1]) && !isset($node_path[2]) ) {
+        return (int)$node_path[1];
+      }
     }
     return FALSE;
+  }
+
+  /**
+   * Gets an excerpt of the source site.
+   * Adapted from Pingback Drupal 6 module.
+   *
+   * @param String $pagelinkedfrom
+   *   The URL of the source site.
+   * @param String $pagelinkedto
+   *   The Url of the target site.
+   * @return
+   *   An array with title and excerpt or FALSE in case of problems.
+   */
+  protected static function vinculumGetExcerpt($pagelinkedfrom, $pagelinkedto) {
+    $excerpt = FALSE;
+    // Let's check the remote site
+    $r = drupal_http_request($pagelinkedfrom, array('headers' => array('User-Agent' => VINCULUM_UA)));
+    if (!empty($r->error) and !$response->code == 200) {
+      return FALSE;
+    }
+    $linea = $r->data;
+    // Work around bug in strip_tags():
+    $linea = str_replace('<!DOC', '<DOC', $linea);
+    $linea = preg_replace('/[\s\r\n\t]+/', ' ', $linea); // normalize spaces
+    $linea = preg_replace('/ <(h1|h2|h3|h4|h5|h6|p|th|td|li|dt|dd|pre|caption|input|textarea|button|body|b
+          r|div|nav)[^>]*>/', "\n\n", $linea);
+    preg_match('|<title>([^<]*?)</title>|is', $linea, $matchtitle);
+    $title = check_plain($matchtitle[1]);
+    if (empty($title)) {
+      return FALSE;
+    }
+
+    $linea = preg_replace('#<script(.*?)>(.*?)</script>#is', '', $linea); //remove scripts
+    $linea = strip_tags($linea, '<a>'); // just keep the tag we need
+
+    $p = explode("\n\n", $linea);
+
+    $preg_target = preg_quote($pagelinkedto);
+
+    foreach ($p as $para) {
+      if (strpos($para, $pagelinkedto) !== FALSE) { // it exists, but is it a link?
+        preg_match('|<a[^>]+?' . $preg_target . '[^>]*>([^>]+?)</a>|', $para, $context);
+
+        // If the URL isn't in a link context, keep looking
+        if (empty($context)) {
+          continue;
+        }
+
+        // We're going to use this fake tag to mark the context in a bit
+        // the marker is needed in case the link text appears more than once in the paragraph
+        //I edited <wpcontext></wpcontext> to <dpcontext></dpcontext> so it becomes more Drupal-ish!
+        $excerpt = preg_replace('|\</?dpcontext\>|', '', $para);
+
+        // prevent really long link text
+        $limit = 200;
+        if (drupal_strlen($context[1]) > $limit) {
+          $context[1] = drupal_substr($context[1], 0, $limit) . ' …';
+        }
+
+        $marker = '<dpcontext>' . $context[1] . '</dpcontext>'; // set up our marker
+        $excerpt = str_replace($context[0], $marker, $excerpt); // swap out the link for our marker
+        $excerpt = strip_tags($excerpt, '<dpcontext>'); // strip all tags but our context marker
+        $excerpt = trim($excerpt);
+        $preg_marker = preg_quote($marker);
+        $excerpt = preg_replace("|.*?\s(.{0,$limit}$preg_marker.{0,$limit})\s.*|s", '$1', $excerpt);
+        $excerpt = strip_tags($excerpt); // YES, again, to remove the marker wrapper
+
+        break;
+      }
+    }
+    return array($title, $excerpt);
   }
 
   /**
@@ -116,6 +180,21 @@ class VinculumReceived extends Entity {
     // - Node is valid and permits ref-backs
     // - Remote article contains a link to the source node/URL
     // - Remote article (title/excerpt/general content) isn't spammy
+
+    // Ensure that we have title and excerpt to carry on with validation
+    if (empty($this->title) || empty($this->excerpt)) {
+      // Populate title and excerpt if possible.
+      if (   $data =self::vinculumGetExcerpt(  $this->url, url( "node/{$this->nid}", array('absolute' =>      TRUE) )  )   ) {
+        list($title, $excerpt) = $data;
+        $this->title   = $this->title ?: $title;
+        $this->excerpt = $this->excerpt ?: $excerpt;
+      }
+      else {
+        // If the title couldn't be extracted programmatically, set the title to
+        // match the URL.
+        $this->title = $this->url;
+      }
+    }
 
     // The 3 required parameters must be provided, but this does not guarantee
     // that the node exists.
@@ -147,8 +226,8 @@ class VinculumReceived extends Entity {
         $this->last_error_message = $error_message;
         return FALSE;
       }
-      return TRUE;
     }
+    return TRUE;
   }
 
   /**
@@ -172,5 +251,7 @@ class VinculumReceived extends Entity {
     }
     return FALSE;
   }
+
+
 
 }
