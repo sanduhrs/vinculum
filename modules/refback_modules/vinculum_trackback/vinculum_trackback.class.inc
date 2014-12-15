@@ -9,7 +9,6 @@
  * - Send a trackback.
  * - Discover if a URL provides trackback, and look up the endpoint URL.
  */
-
 class VinculumTrackbackHandler {
 
   // User-agent to use when querying remote sites.
@@ -322,9 +321,9 @@ class VinculumTrackbackHandler {
 
     $mime_type = (isset($result->headers['content-type'])) ? $result->headers['content-type'] : NULL;
     $is_valid = substr_count($mime_type, 'text/html')
-             || substr_count($mime_type, 'application/xhtml+xml')
-             || substr_count($mime_type, 'application/xml')
-             || substr_count($mime_type, 'text/xml');
+      || substr_count($mime_type, 'application/xhtml+xml')
+      || substr_count($mime_type, 'application/xml')
+      || substr_count($mime_type, 'text/xml');
     return $is_valid;
   }
 

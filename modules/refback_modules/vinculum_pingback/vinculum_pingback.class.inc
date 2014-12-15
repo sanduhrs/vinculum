@@ -10,7 +10,6 @@
  * - Send a Pingback.
  * - Discover if a URL provides Pingback, and look up the XML-RPC endpoint.
  */
-
 class VinculumPingbackHandler {
 
   // User-agent to use when querying remote sites.

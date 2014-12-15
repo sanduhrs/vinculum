@@ -47,7 +47,7 @@ define('VINCULUM_UA', 'Drupal Refback (+http://drupal.org/project/vinculum)');
 // The local node could not be found.
 define('VINCULUM_ERROR_LOCAL_NODE_NOT_FOUND', 1);
 
-// The local node could not be used as a ref-back resource (e.g. ref-backs are
+// The local node could not be used as a ref-back resource (e.g., ref-backs are
 // disabled on the node).
 define('VINCULUM_ERROR_LOCAL_NODE_REFBACK_NOT_ALLOWED', 2);
 
@@ -55,7 +55,7 @@ define('VINCULUM_ERROR_LOCAL_NODE_REFBACK_NOT_ALLOWED', 2);
 define('VINCULUM_ERROR_REFBACK_ALREADY_REGISTERED', 3);
 
 // The ref-back source does not contain the link to target
-define('VINCULUM_ERROR_REMOTE_URL_MISSING_LINK',4);
+define('VINCULUM_ERROR_REMOTE_URL_MISSING_LINK', 4);
 /**
  * Implements hook_views_api().
  */
@@ -147,7 +147,7 @@ function vinculum_node_insert($node) {
   _vinculum_node_save_settings($node);
   // Send ref-backs if required.
   if (!empty($node->vinculum_new_refbacks)) {
-    drupal_register_shutdown_function('vinculum_send_refbacks', $node->vinculum_new_refbacks,$node);// instead of vinculum_send_refbacks($node->vinculum_new_refbacks, $node); To ensure that node is saved
+    drupal_register_shutdown_function('vinculum_send_refbacks', $node->vinculum_new_refbacks, $node);// instead of vinculum_send_refbacks($node->vinculum_new_refbacks, $node); To ensure that node is saved
 
   }
 }
@@ -161,7 +161,7 @@ function vinculum_node_update($node) {
 
 // Send ref-backs if required.
   if (!empty($node->vinculum_new_refbacks)) {
-    drupal_register_shutdown_function('vinculum_send_refbacks', $node->vinculum_new_refbacks,$node);
+    drupal_register_shutdown_function('vinculum_send_refbacks', $node->vinculum_new_refbacks, $node);
     //vinculum_send_refbacks($node->vinculum_new_refbacks, $node); //Ensure node is saved...
   }
 }
@@ -212,7 +212,7 @@ function vinculum_vinculum_received_validate(VinculumReceived $vinculum) {
   if (variable_get('vinculum_validate_remote_pages', FALSE)) {
     // Validate that the remote node is reachable.
     $headers=array();//$headers=array( "headers" => array("X-Forwarded-For"=> origin_ip ) ); #TODO: add X-Forwarded-For to fight against DDOS as says https://indiewebcamp.com/Webmention#using_x-forwarded-for_to_mitigate_DDoS_abuse . Needs to set origin_ip in vnculum object.
-    $result = drupal_http_request($vinculum->url,array( "headers" => $headers ));
+    $result = drupal_http_request($vinculum->url, array( "headers" => $headers ));
 
     // Treat all HTTP errors (inc Forbidden) as remote URL not found.
     if (isset($result->error)) {
@@ -224,10 +224,11 @@ function vinculum_vinculum_received_validate(VinculumReceived $vinculum) {
     // Extract all the URLs from the page content.
     $urls = _vinculum_extract_urls($content);
     $matched = FALSE;
-    if (in_array($vinculum->localUrl,$urls)){
+    if (in_array($vinculum->localUrl, $urls)) {
       //Fast check if absolute url found
       $matched=TRUE;
-    }else{
+    }
+    else{
       //else look for relatives urls
       foreach ($urls as $url) {
         if ($vinculum->nid == vinculum_lookup_nid($url)) {
@@ -237,7 +238,7 @@ function vinculum_vinculum_received_validate(VinculumReceived $vinculum) {
       }
     }
     if (!$matched) {
-      return array(VINCULUM_ERROR_REMOTE_URL_MISSING_LINK,"The target url is not found in source code.");
+      return array(VINCULUM_ERROR_REMOTE_URL_MISSING_LINK, "The target url is not found in source code.");
     }
   }
 
@@ -264,6 +265,9 @@ function vinculum_vinculum_received_presave(VinculumReceived $vinculum) {
   */
 }
 
+/**
+ * Implements hook_vinculum_received_insert().
+ */
 function vinculum_vinculum_received_insert(VinculumReceived $vinculum) {
   // Fire hook_vinculum_received_action().
   // Actions are implemented through:
@@ -374,14 +378,14 @@ function vinculum_send_single_vinculum($source, $target, $node) {
   // Record the timestamp of this attempt in the {node_vinculum_sent} table.
   // This allows vinculums which have not been successful to be re-attempted
   // periodically.
-  $sendTime=time();
+  $send_time = time();
   db_merge('node_vinculum_sent')
     ->key(array(
       'nid' => $node->nid,
       'url' => $target,
       ))
     ->fields(array(
-      'created' => $sendTime,
+      'created' => $send_time,
     ))
     ->execute();
 
@@ -422,14 +426,14 @@ function vinculum_send_single_vinculum($source, $target, $node) {
       // Treat vinculum as vinculum object.
       //$vinculum=new vinculum((int)$node->nid, $target, $handler->module);OLD! TODO REMOVE
       // Attempt to create a sent object with basic info
-      $vinculumSent = new stdClass;
-      $vinculumSent->handler= $handler->module;
-      $vinculumSent->url= $target;
-      $vinculumSent->nid= $node->nid;
-      $vinculumSent->created= $sendTime;
-      $vinculumSent->title= $node->title;
+      $vinculum_sent = new stdClass;
+      $vinculum_sent->handler= $handler->module;
+      $vinculum_sent->url= $target;
+      $vinculum_sent->nid= $node->nid;
+      $vinculum_sent->created= $send_time;
+      $vinculum_sent->title= $node->title;
 
-      module_invoke_all('vinculum_sent_action', $vinculumSent);
+      module_invoke_all('vinculum_sent_action', $vinculum_sent);
       return TRUE;
     }
   }
@@ -453,10 +457,10 @@ function vinculum_send_single_vinculum($source, $target, $node) {
  * The node NID, or FALSE if a corresponding node cannot be found.
  */
 function vinculum_lookup_nid($url) {
-  $path=str_replace($GLOBALS['base_url']."/" , "", $url);
-  if ($path!=$url){
+  $path = str_replace($GLOBALS['base_url'] . "/" , "", $url);
+  if ($path != $url) {
     $node_path = explode('/', drupal_get_normal_path($path));
-    if ($node_path[0]=='node' && is_numeric($node_path[1])){
+    if ($node_path[0] == 'node' && is_numeric($node_path[1]) && !isset($node_path[2]) ) {
       return (int)$node_path[1];
     }
   }
@@ -750,78 +754,6 @@ function _vinculum_extract_urls($text) {
   return array_unique($links);
 }
 
-
-/**
- * Gets an excerpt of the source site.
- * Adapted from Pingback Drupal 6 module.
- *
- * @param String $pagelinkedfrom
- *   The URL of the source site.
- * @return
- *   An array with title and excerpt or FALSE in case of problems.
- 
-function _vinculum_get_excerpt($pagelinkedfrom, $pagelinkedto) {
-  $excerpt = FALSE;
-  // Let's check the remote site
-  $r = drupal_http_request($pagelinkedfrom, array('headers' => array('User-Agent' => VINCULUM_UA)));
-  if (!empty($r->error) and !$response->code == 200){
-    return FALSE;
-  }
-  $linea = $r->data;
-  // Work around bug in strip_tags():
-  $linea = str_replace('<!DOC', '<DOC', $linea);
-  $linea = preg_replace('/[\s\r\n\t]+/', ' ', $linea); // normalize spaces
-  $linea = preg_replace('/ <(h1|h2|h3|h4|h5|h6|p|th|td|li|dt|dd|pre|caption|input|textarea|button|body|b
-        r|div|nav)[^>]*>/', "\n\n", $linea);
-  preg_match('|<title>([^<]*?)</title>|is', $linea, $matchtitle);
-  $title = check_plain($matchtitle[1]);
-  if (empty($title)) {
-    return FALSE;
-  }
-
-  $linea = preg_replace('#<script(.*?)>(.*?)</script>#is', '', $linea); //remove scripts
-  $linea = strip_tags($linea, '<a>'); // just keep the tag we need
-
-  $p = explode("\n\n", $linea);
-
-  $preg_target = preg_quote($pagelinkedto);
-
-  foreach ($p as $para) {
-    if (strpos($para, $pagelinkedto) !== FALSE) { // it exists, but is it a link?
-      preg_match('|<a[^>]+?'. $preg_target .'[^>]*>([^>]+?)</a>|', $para, $context);
-
-      // If the URL isn't in a link context, keep looking
-      if (empty($context)) {
-        continue;
-      }
-
-      // We're going to use this fake tag to mark the context in a bit
-      // the marker is needed in case the link text appears more than once in the paragraph
-      //I edited <wpcontext></wpcontext> to <dpcontext></dpcontext> so it becomes more Drupal-ish!
-      $excerpt = preg_replace('|\</?dpcontext\>|', '', $para);
-
-
-      // prevent really long link text
-      $limit = 200;
-      if (drupal_strlen($context[1]) > $limit) {
-        $context[1] = drupal_substr($context[1], 0, $limit) .' …';
-      }
-
-      $marker = '<dpcontext>'. $context[1] .'</dpcontext>'; // set up our marker
-      $excerpt = str_replace($context[0], $marker, $excerpt); // swap out the link for our marker
-      $excerpt = strip_tags($excerpt, '<dpcontext>'); // strip all tags but our context marker
-      $excerpt = trim($excerpt);
-      $preg_marker = preg_quote($marker);
-      $excerpt = preg_replace("|.*?\s(.{0,$limit}$preg_marker.{0,$limit})\s.*|s", '$1', $excerpt);
-      $excerpt = strip_tags($excerpt); // YES, again, to remove the marker wrapper
-
-      break;
-    }
-  }
-  return array($title,$excerpt);
-}
-*/
-
 /**
  * Performs an HTTP request.
  *
@@ -851,7 +783,7 @@ function _vinculum_get_excerpt($pagelinkedfrom, $pagelinkedto) {
  *   - request: A string containing the request body that was sent.
  *   - code: An integer containing the response status code, or the error code
  *     if an error occurred.
- *   - protocol: The response protocol (e.g. HTTP/1.1 or HTTP/1.0).
+ *   - protocol: The response protocol (e.g., HTTP/1.1 or HTTP/1.0).
  *   - status_message: The status message from the response, if a response was
  *     received.
  *   - redirect_code: If redirected, an integer containing the initial response

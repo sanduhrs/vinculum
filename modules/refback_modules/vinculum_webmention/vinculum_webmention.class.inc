@@ -5,7 +5,6 @@
  *
  * @see http://webmention.org
  */
-
 class VinculumWebmentionHandler {
 
   // User-agent to use when querying remote sites.

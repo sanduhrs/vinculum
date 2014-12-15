@@ -3,7 +3,7 @@
  * @file
  * Provide the Webmention protocol to the Vinculum module.
  *
- * @see Specification document: http://archive.cweiske.de/trackback/trackback-1.2.html
+ * @see http://webmention.org/
  */
 
 /**
@@ -67,19 +67,17 @@ function vinculum_webmention_receive() {
   $success = TRUE;
 
   //Will check later #TODO will fight DDOS better https://github.com/converspace/webmention/blob/master/README.md#sender-notifies-receiver
-  if (variable_get('vinculum_webmention_receive_async',false)){
+  if (variable_get('vinculum_webmention_receive_async', FALSE)) {
     drupal_add_http_header('Status', '202 Accepted');
-    echo $_POST['target'].'/webmention_in_queue'; 
+    echo check_plain($_POST['target']) . '/webmention_in_queue';
     // Perform end-of-request tasks.
-    drupal_page_footer();   
+    drupal_page_footer();
     return;
   }
-
-
-
+  
   // Verify Webmention
-  $source = $_POST['source'];
-  $target = $_POST['target'];
+  $source = check_plain($_POST['source']);
+  $target = check_plain($_POST['target']);
 
   // 1. The receiver SHOULD check that target is a valid resource belonging to
   // it and that it accepts webmentions.
@@ -136,7 +134,7 @@ function vinculum_webmention_receive() {
 
     // Something went wrong.
     drupal_add_http_header('Status', '500 Internal Server Error');
-    print 'Something went wrong. Really!';   
+    print 'Something went wrong. Really!';
   }
 
   // Everything went fine.
@@ -144,7 +142,7 @@ function vinculum_webmention_receive() {
     drupal_add_http_header('Status', '200 OK');
     print 'OK';
   }
-  vinculum_dbg($success,true,'webmentionthread');
+  vinculum_dbg($success, TRUE, 'webmentionthread');
 
   // Perform end-of-request tasks.
   drupal_page_footer();
