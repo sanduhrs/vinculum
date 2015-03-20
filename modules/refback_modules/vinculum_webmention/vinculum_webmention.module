@@ -71,7 +71,7 @@ function vinculum_webmention_receive() {
   $source = FALSE;
   $nid = FALSE;
   // Verify Webmention
-    print_r( $_POST);
+    //print_r( $_POST);
 
   if (isset($_POST['source'])) {
     $source = $_POST['source']; // @todo add check_plain for security
@@ -171,9 +171,9 @@ function vinculum_webmention_receive() {
  *   Return a node id or FALSE
  */
 function vinculum_webmention_validate_resource_exists($target) {
-  print ('target is' . $target);
+  //print ('target is' . $target);
   if (!$target) {
-    watchdog('vinculum_webmention', 'vinculum_webmention_validate_resource_exists FALSE %target ',
+    watchdog('vinculum_webmention', 'vinculum_webmention_validate_resource_exists FALSE %target right away',
     array('%target' => $target));
     return FALSE;
   }
@@ -220,7 +220,7 @@ function vinculum_webmention_validate_resource_exists($target) {
     }
   }
   // No idea.
-  watchdog('vinculum_webmention', 'vinculum_webmention_validate_resource_exists FALSE to %target ',
+  watchdog('vinculum_webmention', 'vinculum_webmention_validate_resource_exists FALSE to %target falls thru',
     array('%target' => $target));
   return FALSE;
 }
