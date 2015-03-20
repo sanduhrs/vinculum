@@ -28,5 +28,6 @@ function vinculum__drush_clear_all_received() {
 	$results = entity_load('vinculum_received');
 	$entity_ids = array_keys($results);
 	entity_delete_multiple('vinculum_received', $entity_ids);
-	drush_log('vinculums_received deleted', $type = 'notice');
+	print drush_log(dt('vinculums_received deleted'), 'ok', $type = 'notice');
+	watchdog('vinculum', 'vinculums_received all deleted by drush', array()); 
 }

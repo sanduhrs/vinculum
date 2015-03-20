@@ -6,6 +6,8 @@
  * @see Specification document: http://archive.cweiske.de/trackback/trackback-1.2.html
  */
 
+define('VINCULUM_WEBMENTION_ACCEPTED', 201);
+
 /**
  * Implements hook_vinculum_handler().
  */
