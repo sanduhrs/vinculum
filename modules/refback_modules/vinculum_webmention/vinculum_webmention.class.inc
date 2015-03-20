@@ -26,25 +26,47 @@ class VinculumWebmentionHandler {
    * @return bool
    */
   public static function send($source, $target) {
-    if ($endpoint_url = self::discover($target)) {
-      $params = array(
-        'source' => $source,
-        'target' => $target,
-      );
+    //if ($endpoint_url == self::discover($target)) { // should be two equals signs eh
+    $params = array(
+      '%source' => $source,
+      '%target' => $target,
+    );
 
-      $response = drupal_http_request($endpoint_url, array(
-        'method' => 'POST',
-        'headers' => array(
-          'User-Agent' => self::UA,
-          'Content-Type' => 'application/x-www-form-urlencoded; charset=utf-8',
-        ),
-        'data' => drupal_http_build_query($params),
-      ));
+    self::debug('Trying Webmention to %target from %source.', $params, WATCHDOG_DEBUG);
 
-      if ($response->code === '200') {
-        return TRUE;
-      }
+    $methods = array(
+      'webmention.webmention' => array($source, $target),
+    );
+    $response = drupal_http_request($target, array(
+      'method' => 'POST',
+      'headers' => array(
+        'User-Agent' => self::UA,
+        'Content-Type' => 'application/x-www-form-urlencoded; charset=utf-8',
+      ),
+      'data' => drupal_http_build_query($params),
+    ));
+
+    if ($response->code === '200') {
+      self::debug('Webmention to %target from %source succeeded.', $params, WATCHDOG_INFO);
+      return TRUE;
     }
+    else {
+      $params = array(
+        '%source' => $source,
+        '%target' => $target,
+        '%responsecode' => $response->code,
+        //'@response' => $response,
+      );
+      dpm($response);
+      if ($response->code == '500') {
+        drupal_set_message(t('500 error attempting to call @target', array('@target' => $target)), 'error');
+      }
+      self::debug('Webmention to %target from %source got something different %responsecode' , $params, WATCHDOG_INFO);
+    }
+  
+    //else {
+    //  self::debug('there was no target %target', $params, WATCHDOG_INFO);
+    //}
     return FALSE;
   }
 
@@ -145,7 +167,7 @@ class VinculumWebmentionHandler {
    */
   public static function debug($message, $params = array(), $error_level = WATCHDOG_NOTICE) {
     if ($error_level <= self::$watchdog_reporting_level) {
-      watchdog('Pingback', $message, $params, $error_level);
+      watchdog('Webmention', $message, $params, $error_level);
     }
   }
 

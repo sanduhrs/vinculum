@@ -450,12 +450,21 @@ function vinculum_send_single_vinculum($source, $target, $node) {
     ->execute();
 
   $handlers = vinculum_get_handler();
+  drupal_set_message(t('vinc handlers' . var_dump($handlers)), 'status');
+  //dpm($handlers);
   foreach ($handlers as $handler) {
     // Invoke hook_vinculum_send().
     $callback = $handler->module . '_vinculum_send';
 
     // Ensure the function exists before attempting to call it.
     if (!function_exists($callback)) {
+      $params = array(
+        '%callback'     => $callback,
+        //'@node_url'   => url("node/{$node->nid}"),
+        '%node_title' => $node->title,
+      );
+      watchdog('Vinculum', 'Missing callback function for %callback when posting for %node_title', 
+        $params, WATCHDOG_DEBUG);
       continue;
     }
     $success = $callback($target, $source, $node);
@@ -626,7 +635,7 @@ function vinculum_load_all_handlers($reset_cache = FALSE) {
     }
     cache_set('vinculum_handlers', $handlers);
   }
-
+  //dpm($handlers); 
   return $handlers;
 }
 

@@ -260,3 +260,4 @@ function vinculum_webmention_validate_source_exists($source) {
 function vinculum_webmention_validate_source_contains_target($source, $target) {
   return VinculumWebmentionHandler::validateSourceContainsTarget($source, $target);
 }
+
