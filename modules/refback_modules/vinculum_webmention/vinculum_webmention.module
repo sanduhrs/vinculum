@@ -65,22 +65,35 @@ function vinculum_webmention_node_view($node, $view_mode, $langcode) {
  */
 function vinculum_webmention_receive() {
   $success = TRUE;
-
+  $target = FALSE;
+  $source = FALSE;
+  $nid = FALSE;
   // Verify Webmention
-  $source = $_POST['source'];
-  $target = $_POST['target'];
+    print_r( $_POST);
 
+  if (isset($_POST['source'])) {
+    $source = $_POST['source']; // @todo add check_plain for security
+  } else {
+    $success = FALSE;
+  }
+  if (isset($_POST['target'])) {
+    $target = $_POST['target'];
+  } else { 
+    $success = FALSE;
+  }
   // 1. The receiver SHOULD check that target is a valid resource belonging to
   // it and that it accepts webmentions.
   $nid = vinculum_webmention_validate_resource_exists($target);
-  $node = node_load($nid);
-  if (!$node->nid) {
+  if ($success) {
+    $node = node_load($nid);
+  }
+  if (!isset($node) || !$node->nid) {
     $success = FALSE;
     drupal_add_http_header('Status', '404 Bad Request');
     echo t('No valid resource.');
   }
 
-  if (!vinculum_webmention_validate_resource_accepts_webmentions($node)) {
+  if (!isset($node) || !vinculum_webmention_validate_resource_accepts_webmentions($node)) {
     $success = FALSE;
     drupal_add_http_header('Status', '404 Bad Request');
     echo t('Resource does not accept Webmentions.');
@@ -104,7 +117,7 @@ function vinculum_webmention_receive() {
 
   //@TODO Add / update / delete Webmention
 
-  if (FALSE) {
+  if (FALSE) { // @todo what?
     $success = FALSE;
 
     // Something went wrong.
@@ -115,7 +128,31 @@ function vinculum_webmention_receive() {
   // Everything went fine.
   if ($success) {
     drupal_add_http_header('Status', '200 OK');
+    watchdog('vinculum_webmention', 'Webmention returns ok from %source to %target ',
+      array('%source' => $source, '%target' => $target));
     print 'OK';
+
+
+    // Build the Vinculum entity.
+    $params = array(
+      'handler'  => 'vinculum_webmention',
+      'nid'      => $node->nid,
+      'url'      => $source,
+    );
+    // Attempt to create a Vinculum entity.
+    $vinculum = new VinculumReceived($params);
+    if ($result = $vinculum->save()) {
+      // Successful: provide a meaningful response.
+      if ($result == SAVED_NEW || $result == SAVED_UPDATED) {
+        watchdog('vinculum_webmention', 'Webmention saved ok %result from %source to %target ',
+          array('%source' => $source, '%target' => $target, '%result' => $result));
+        return VINCULUM_WEBMENTION_ACCEPTED;
+      }
+    } else {
+
+      watchdog('vinculum_webmention', 'Webmention no success from %source to %target w result= %result',
+        array('%source' => $source, '%target' => $target, '%result' => $result));
+    }
   }
 
   // Perform end-of-request tasks.
@@ -132,6 +169,12 @@ function vinculum_webmention_receive() {
  *   Return a node id or FALSE
  */
 function vinculum_webmention_validate_resource_exists($target) {
+  print ('target is' . $target);
+  if (!$target) {
+    watchdog('vinculum_webmention', 'vinculum_webmention_validate_resource_exists FALSE %target ',
+    array('%target' => $target));
+    return FALSE;
+  }
   $parts = parse_url($target);
 
   // Non clean URL.
@@ -175,6 +218,8 @@ function vinculum_webmention_validate_resource_exists($target) {
     }
   }
   // No idea.
+  watchdog('vinculum_webmention', 'vinculum_webmention_validate_resource_exists FALSE to %target ',
+    array('%target' => $target));
   return FALSE;
 }
 
@@ -186,6 +231,9 @@ function vinculum_webmention_validate_resource_exists($target) {
  * @return bool
  */
 function vinculum_webmention_validate_resource_accepts_webmentions($node) {
+  if (!$node) {
+    return FALSE;
+  }
   return (bool) $node->vinculum_send;
 }
 
