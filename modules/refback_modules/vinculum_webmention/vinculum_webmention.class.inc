@@ -58,11 +58,8 @@ class VinculumWebmentionHandler {
         '%status_message' => $response->status_message,
         //'@response' => $response,
       );
-      dpm($response);
-      if ($response->code != 200) {
-        drupal_set_message(t('Error: tried to Webmention @target, %responsecode %status_message', 
-          array('@target' => $target, '%status_message' => $response->status_message, '%responsecode' => $response->code,)), 'error');
-      }
+      drupal_set_message(t('Error: tried to Webmention @target, %responsecode %status_message', 
+        array('@target' => $target, '%status_message' => $response->status_message, '%responsecode' => $response->code,)), 'error');
       self::debug('Webmention to %target from %source got different: %responsecode %status_message' , $params, WATCHDOG_INFO);
     }
   
