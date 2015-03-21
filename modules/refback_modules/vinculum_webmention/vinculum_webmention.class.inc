@@ -46,7 +46,7 @@ class VinculumWebmentionHandler {
       'data' => drupal_http_build_query($params),
     ));
 
-    if ($response->code === '200') {
+    if ($response->code === 200) {
       self::debug('Webmention to %target from %source succeeded.', $params, WATCHDOG_INFO);
       return TRUE;
     }
@@ -59,7 +59,7 @@ class VinculumWebmentionHandler {
         //'@response' => $response,
       );
       dpm($response);
-      if ($response->code != '200') {
+      if ($response->code != 200) {
         drupal_set_message(t('Error: tried to Webmention @target, %responsecode %status_message', 
           array('@target' => $target, '%status_message' => $response->status_message, '%responsecode' => $response->code,)), 'error');
       }
@@ -84,7 +84,7 @@ class VinculumWebmentionHandler {
   public static function discover($target) {
     $response = drupal_http_request($target);
 
-    if ($response->code != '200') {
+    if ($response->code != 200) {
       return FALSE;
     }
 
