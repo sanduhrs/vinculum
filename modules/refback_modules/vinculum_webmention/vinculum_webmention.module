@@ -6,6 +6,7 @@
  * @see Specification document: http://archive.cweiske.de/trackback/trackback-1.2.html
  */
 
+// Return a HTTP 201 (Created) response when a 'webmention' is successfully added.
 define('VINCULUM_WEBMENTION_ACCEPTED', 201);
 
 /**
@@ -66,39 +67,51 @@ function vinculum_webmention_node_view($node, $view_mode, $langcode) {
  * Webmention endpoint; Menu callback.
  */
 function vinculum_webmention_receive() {
-  $success = TRUE;
-  $target = FALSE;
-  $source = FALSE;
-  $nid = FALSE;
-  // Verify Webmention
-    //print_r( $_POST);
+  // All the responses used here are plain-text.
+  drupal_add_http_header('Content-Type', 'text/plain; utf-8');
 
-  if (isset($_POST['source'])) {
-    $source = $_POST['source']; // @todo add check_plain for security
-  } else {
-    $success = FALSE;
+
+  // Webmention provides both the source and the target URLs as POST data.
+  $source = (isset($_POST['source'])) ? $_POST['source'];
+  $target = (isset($_POST['target'])) ? $_POST['target'];
+
+  // Require both a source and a target.
+  if (!($source && $target)) {
+    drupal_add_http_header('Status', '400 Bad Request');
+
+    // Provide HTTP headers and a plain text response to help developers debug
+    // their errors.
+    if (empty($source)) {
+      drupal_add_http_header('X-WEBMENTION-ERROR', 'Missing source parameter.', TRUE);
+      echo "Missing source parameter.\n";
+    }
+    if (empty($target)) {
+      drupal_add_http_header('X-WEBMENTION-ERROR', 'Missing target parameter.', TRUE);
+      echo "Missing target parameter.\n";
+    }
+
+    // Return NULL to suppress the usual Drupal web-page wrapper.
+    return NULL;
   }
-  if (isset($_POST['target'])) {
-    $target = $_POST['target'];
-  } else { 
-    $success = FALSE;
-  }
+
+
   // 1. The receiver SHOULD check that target is a valid resource belonging to
   // it and that it accepts webmentions.
-  $nid = vinculum_webmention_validate_resource_exists($target);
-  if ($success) {
+  if ($nid = vinculum_webmention_validate_resource_exists($target)) {
     $node = node_load($nid);
   }
-  if (!isset($node) || !$node->nid) {
-    $success = FALSE;
-    drupal_add_http_header('Status', '404 Bad Request');
-    echo t('No valid resource.');
+  if (empty($node)) {
+    drupal_add_http_header('Status', '400 Bad Request');
+    drupal_add_http_header('X-WEBMENTION-ERROR', 'Invalid target.', TRUE);
+    echo "Invalid target parameter.\n";
+    return NULL;
   }
 
-  if (!isset($node) || !vinculum_webmention_validate_resource_accepts_webmentions($node)) {
-    $success = FALSE;
-    drupal_add_http_header('Status', '404 Bad Request');
-    echo t('Resource does not accept Webmentions.');
+  if (!vinculum_webmention_validate_resource_accepts_webmentions($node)) {
+    drupal_add_http_header('Status', '400 Bad Request');
+    drupal_add_http_header('X-WEBMENTION-ERROR', 'Invalid target.', TRUE);
+    echo "Invalid target parameter.\n";
+    return NULL;
   }
 
   // 2. The receiver SHOULD perform a HTTP GET request on source to confirm that
@@ -106,55 +119,46 @@ function vinculum_webmention_receive() {
   // Content-Type of the entity returned by source to make sure it is a textual
   // response).
   if (!vinculum_webmention_validate_source_exists($source)) {
-    $success = FALSE;
-    drupal_add_http_header('Status', '404 Bad Request');
-    echo t('Source does not exist or is not accessible.');
+    drupal_add_http_header('Status', '400 Bad Request');
+    drupal_add_http_header('X-WEBMENTION-ERROR', 'Invalid source.', TRUE);
+    echo "Invalid source: does not contain a reference to the target parameter.\n";
+    return NULL;
   }
 
   if (!vinculum_webmention_validate_source_contains_target($source, $target)) {
-    $success = FALSE;
-    drupal_add_http_header('Status', '404 Bad Request');
-    echo t('Source does not contain target.');
+    drupal_add_http_header('Status', '400 Bad Request');
+    drupal_add_http_header('X-WEBMENTION-ERROR', 'Invalid source.', TRUE);
+    echo "The source does not reference the target.\n";
+    return NULL;
   }
 
-  //@TODO Add / update / delete Webmention
 
-  if (FALSE) { // @todo what?
-    $success = FALSE;
+  // If this code path is reached, the request is valid.
+  // Build the Vinculum entity.
+  $params = array(
+    'handler'  => 'vinculum_webmention',
+    'nid'      => $node->nid,
+    'url'      => $source,
+  );
 
-    // Something went wrong.
-    drupal_add_http_header('Status', '500 Internal Server Error');
-    print 'Something went wrong. Really!';
+  // Attempt to create a Vinculum entity.
+  $vinculum = new VinculumReceived($params);
+  if ($result = $vinculum->save()) {
+    watchdog('vinculum_webmention', 'Webmention saved ok %result from %source to %target ',
+      array('%source' => $source, '%target' => $target, '%result' => $result), WATCHDOG_INFO);
+
+    drupal_add_http_header('Status', '201 Created');
+    echo "Webmention added.\n";
+    return NULL;
   }
+  else {
+    // Report a server error.
+    watchdog('vinculum_webmention', 'Error saving webmention from %source to %target with result= %result',
+      array('%source' => $source, '%target' => $target, '%result' => $result), WATCHDOG_ERROR);
 
-  // Everything went fine.
-  if ($success) {
-    drupal_add_http_header('Status', '200 OK');
-    watchdog('vinculum_webmention', 'Webmention returns ok from %source to %target ',
-      array('%source' => $source, '%target' => $target));
-    print 'OK';
-
-
-    // Build the Vinculum entity.
-    $params = array(
-      'handler'  => 'vinculum_webmention',
-      'nid'      => $node->nid,
-      'url'      => $source,
-    );
-    // Attempt to create a Vinculum entity.
-    $vinculum = new VinculumReceived($params);
-    if ($result = $vinculum->save()) {
-      // Successful: provide a meaningful response.
-      if ($result == SAVED_NEW || $result == SAVED_UPDATED) {
-        watchdog('vinculum_webmention', 'Webmention saved ok %result from %source to %target ',
-          array('%source' => $source, '%target' => $target, '%result' => $result));
-        return VINCULUM_WEBMENTION_ACCEPTED;
-      }
-    } else {
-
-      watchdog('vinculum_webmention', 'Webmention no success from %source to %target w result= %result',
-        array('%source' => $source, '%target' => $target, '%result' => $result));
-    }
+    drupal_add_http_header('Status', '500 Server error');
+    echo "An error prevented the webmention from being saved.\n";
+    return NULL;
   }
 
   // Perform end-of-request tasks.

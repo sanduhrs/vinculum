@@ -450,8 +450,6 @@ function vinculum_send_single_vinculum($source, $target, $node) {
     ->execute();
 
   $handlers = vinculum_get_handler();
-  //drupal_set_message(t('vinc handlers' . var_dump($handlers)), 'status');
-  //dpm($handlers);
   foreach ($handlers as $handler) {
     // Invoke hook_vinculum_send().
     $callback = $handler->module . '_vinculum_send';
@@ -635,7 +633,7 @@ function vinculum_load_all_handlers($reset_cache = FALSE) {
     }
     cache_set('vinculum_handlers', $handlers);
   }
-  //dpm($handlers); 
+
   return $handlers;
 }
 
