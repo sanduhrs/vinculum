@@ -70,7 +70,6 @@ function vinculum_webmention_receive() {
   // All the responses used here are plain-text.
   drupal_add_http_header('Content-Type', 'text/plain; utf-8');
 
-
   // Webmention provides both the source and the target URLs as POST data.
   $source = (isset($_POST['source'])) ? $_POST['source'];
   $target = (isset($_POST['target'])) ? $_POST['target'];
@@ -93,7 +92,6 @@ function vinculum_webmention_receive() {
     // Return NULL to suppress the usual Drupal web-page wrapper.
     return NULL;
   }
-
 
   // 1. The receiver SHOULD check that target is a valid resource belonging to
   // it and that it accepts webmentions.
@@ -131,7 +129,6 @@ function vinculum_webmention_receive() {
     echo "The source does not reference the target.\n";
     return NULL;
   }
-
 
   // If this code path is reached, the request is valid.
   // Build the Vinculum entity.
@@ -175,10 +172,7 @@ function vinculum_webmention_receive() {
  *   Return a node id or FALSE
  */
 function vinculum_webmention_validate_resource_exists($target) {
-  //print ('target is' . $target);
   if (!$target) {
-    watchdog('vinculum_webmention', 'vinculum_webmention_validate_resource_exists FALSE %target right away',
-    array('%target' => $target));
     return FALSE;
   }
   $parts = parse_url($target);
@@ -224,15 +218,13 @@ function vinculum_webmention_validate_resource_exists($target) {
     }
   }
   // No idea.
-  watchdog('vinculum_webmention', 'vinculum_webmention_validate_resource_exists FALSE to %target falls thru',
-    array('%target' => $target));
   return FALSE;
 }
 
 /**
  * Validate if a resource accepts Webmentions.
  *
- * @param $target
+ * @param $node
  *
  * @return bool
  */
@@ -264,4 +256,3 @@ function vinculum_webmention_validate_source_exists($source) {
 function vinculum_webmention_validate_source_contains_target($source, $target) {
   return VinculumWebmentionHandler::validateSourceContainsTarget($source, $target);
 }
-

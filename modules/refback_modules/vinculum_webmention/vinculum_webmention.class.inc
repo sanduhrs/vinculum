@@ -34,9 +34,6 @@ class VinculumWebmentionHandler {
 
     self::debug('Trying Webmention to %target from %source.', $params, WATCHDOG_DEBUG);
 
-    $methods = array(
-      'webmention.webmention' => array($source, $target),
-    );
     $response = drupal_http_request($target, array(
       'method' => 'POST',
       'headers' => array(
@@ -56,16 +53,9 @@ class VinculumWebmentionHandler {
         '%target' => $target,
         '%responsecode' => $response->code,
         '%status_message' => $response->status_message,
-        //'@response' => $response,
       );
-      drupal_set_message(t('Error: tried to Webmention @target, %responsecode %status_message', 
-        array('@target' => $target, '%status_message' => $response->status_message, '%responsecode' => $response->code,)), 'error');
       self::debug('Webmention to %target from %source got different: %responsecode %status_message' , $params, WATCHDOG_INFO);
     }
-  
-    //else {
-    //  self::debug('there was no target %target', $params, WATCHDOG_INFO);
-    //}
     return FALSE;
   }
 
