@@ -77,15 +77,16 @@ class VinculumReceived extends Entity {
    * The node NID, or FALSE if a corresponding node cannot be found.
    */
   public static function lookupNid($url) {
-    $path=str_replace($GLOBALS['base_url']."/" , "", $url);
-    if ($path!=$url){
+    $path = str_replace($GLOBALS['base_url'] . "/", "", $url);
+    if ($path != $url) {
       $node_path = explode('/', drupal_get_normal_path($path));
-      if ($node_path[0]=='node' && is_numeric($node_path[1])){
-        return (int)$node_path[1];
+      if ($node_path[0] == 'node' && is_numeric($node_path[1])) {
+        return (int) $node_path[1];
       }
     }
     return FALSE;
   }
+
   /**
    * The default label for a ref-back is the page-title of the referring URL
    * (or the URL if the title is not available).
