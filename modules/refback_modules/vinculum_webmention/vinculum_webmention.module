@@ -71,8 +71,8 @@ function vinculum_webmention_receive() {
   drupal_add_http_header('Content-Type', 'text/plain; utf-8');
 
   // Webmention provides both the source and the target URLs as POST data.
-  $source = (isset($_POST['source'])) ? $_POST['source'];
-  $target = (isset($_POST['target'])) ? $_POST['target'];
+  $source = (isset($_POST['source'])) ? $_POST['source'] : '';
+  $target = (isset($_POST['target'])) ? $_POST['target'] : '';
 
   // Require both a source and a target.
   if (!($source && $target)) {
