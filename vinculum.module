@@ -213,8 +213,8 @@ function vinculum_vinculum_received_presave(VinculumReceived $vinculum) {
     // Populate title and excerpt if possible.
     if ($data = _vinculum_extract_title_and_excerpt($vinculum->url)) {
       list ($title, $excerpt) = $data;
-      $vinculum->title   = $vinculum->title ?: $title;
-      $vinculum->excerpt = $vinculum->excerpt ?: $excerpt;
+      $vinculum->title   = $title;
+      $vinculum->excerpt = $excerpt;
     }
     else {
       // If the title couldn't be extracted programmatically, set the title to
@@ -846,11 +846,21 @@ function _vinculum_extract_title_and_excerpt($url) {
  * Parse HTML to attempt to extract a title and excerpt.
  */
 function _vinculum_parse_content($html) {
-  $title = $excerpt = '';
-  // Look for a title tag in the HTML.
-  if (preg_match('#<title>(+*?)</title>#', $html, $matches)) {
-    $title = $matches[1];
+  $formats = Mf2\parse($html);
+  foreach ($formats['items'] as $item) {
+    if ($item['type'][0] === 'h-entry') {
+      $title = check_plain($item['properties']['name'][0]);
+      $excerpt = $item['properties']['content'][0]['html'];
+      break;
+    }
   }
+  if (empty($title)) {
+    $title = t('n/a');
+  }
+  if (empty($excerpt)) {
+    $excerpt = t('n/a');
+  }
+
   return array($title, $excerpt);
 }
 
