@@ -26,15 +26,20 @@ class VinculumWebmentionHandler {
    * @return bool
    */
   public static function send($source, $target) {
-    //if ($endpoint_url == self::discover($target)) { // should be two equals signs eh
+    // Do not send webmentions to myself.
+    if ($source === $target) {
+      return FALSE;
+    }
+
     $params = array(
-      '%source' => $source,
-      '%target' => $target,
+      'source' => $source,
+      'target' => $target,
     );
 
     self::debug('Trying Webmention to %target from %source.', $params, WATCHDOG_DEBUG);
 
-    $response = drupal_http_request($target, array(
+    $endpoint = self::discover($target);
+    $response = drupal_http_request($endpoint, array(
       'method' => 'POST',
       'headers' => array(
         'User-Agent' => self::UA,
