@@ -8,6 +8,4 @@ files[] = views/vinculum.views.inc
 files[] = views/handlers/vinculum_views_handler_field_refback_text.inc
 
 dependencies[] = entity
-
-
-;files[] = vinculum.test
+dependencies[] = microformats2
