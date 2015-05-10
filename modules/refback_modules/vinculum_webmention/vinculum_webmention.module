@@ -140,8 +140,9 @@ function vinculum_webmention_receive() {
 
   // Attempt to create a Vinculum entity.
   $vinculum = new VinculumReceived($params);
+
   if ($result = $vinculum->save()) {
-    watchdog('vinculum_webmention', 'Webmention saved ok %result from %source to %target ',
+    watchdog('Webmention', 'Webmention saved ok %result from %source to %target ',
       array('%source' => $source, '%target' => $target, '%result' => $result), WATCHDOG_INFO);
 
     drupal_add_http_header('Status', '201 Created');
@@ -150,7 +151,7 @@ function vinculum_webmention_receive() {
   }
   else {
     // Report a server error.
-    watchdog('vinculum_webmention', 'Error saving webmention from %source to %target with result= %result',
+    watchdog('Webmention', 'Error saving webmention from %source to %target with result= %result',
       array('%source' => $source, '%target' => $target, '%result' => $result), WATCHDOG_ERROR);
 
     drupal_add_http_header('Status', '500 Server error');
